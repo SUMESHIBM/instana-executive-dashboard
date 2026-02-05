@@ -13,7 +13,7 @@ A professional executive dashboard showcasing Instana's business value through k
 
 ## 🚀 Live Demo
 
-View the dashboard: [GitHub Pages URL will be here after deployment]
+View the dashboard: https://sumeshibm.github.io/instana-executive-dashboard/
 
 ## 📊 Dashboard Sections
 
