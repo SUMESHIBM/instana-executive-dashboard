@@ -61,6 +61,73 @@
             color: #c6c6c6;
         }
         
+        .scenario-switcher {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px;
+            background: #262626;
+            border-radius: 4px;
+        }
+        
+        .scenario-btn {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: none;
+            background: transparent;
+            color: #c6c6c6;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.2s;
+        }
+        
+        .scenario-btn:hover {
+            background: #393939;
+            color: #f4f4f4;
+        }
+        
+        .scenario-btn.active {
+            background: #0f62fe;
+            color: #ffffff;
+        }
+        
+        .alert-banner {
+            background: #fff1f1;
+            border-left: 4px solid #da1e28;
+            padding: 16px 24px;
+            margin: 0 auto 24px auto;
+            max-width: 1600px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .alert-banner.show {
+            display: flex;
+        }
+        
+        .alert-banner-icon {
+            color: #da1e28;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .alert-banner-content {
+            flex: 1;
+        }
+        
+        .alert-banner-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #161616;
+            margin-bottom: 4px;
+        }
+        
+        .alert-banner-message {
+            font-size: 13px;
+            color: #525252;
+        }
+        
         .dashboard {
             max-width: 1600px;
             margin: 0 auto;
@@ -288,8 +355,24 @@
             <div class="dashboard-title">Business Value Dashboard</div>
         </div>
         <div class="top-header-right">
+            <div class="scenario-switcher">
+                <button class="scenario-btn active" onclick="switchScenario('happy')">Happy Scenario</button>
+                <button class="scenario-btn" onclick="switchScenario('error')">Error Scenario</button>
+            </div>
             <span>Last updated: Jul 24, Last hour</span>
             <span>Live ▶</span>
+        </div>
+    </div>
+    
+    <!-- Alert Banner (shown only in Error scenario) -->
+    <div class="alert-banner" id="alertBanner">
+        <div class="alert-banner-icon">⚠</div>
+        <div class="alert-banner-content">
+            <div class="alert-banner-title">Alert: Resource limits exceeded</div>
+            <div class="alert-banner-message" id="alertMessage">
+                Data ingestion and MVS usage have exceeded limits, resulting in cost overruns.
+                Current monthly cost: $192.8K (13% above benchmark)
+            </div>
         </div>
     </div>
     
@@ -299,143 +382,457 @@
             <p>Real-time Monitoring Impact & ROI Metrics</p>
         </div>
         
-        <!-- Row 1: Cost Impact & Application Health -->
+        <!-- Row 1: Unified Resource Usage & Cost Overview -->
         <div class="grid">
-            <div class="card card-large">
-                <div class="card-title">Impact of Data Ingestion on Related Cost</div>
-                <div class="metric-value">$127.5K</div>
-                <div class="metric-label">CURRENT MONTHLY COST</div>
-                <div class="trend positive">↓ 18% vs. last month</div>
-                <div class="comparison">
-                    <div class="comparison-item">
-                        <div class="comparison-value">$156K</div>
-                        <div class="comparison-label">Previous Period</div>
+            <div class="card card-full" id="unifiedCard">
+                <div class="card-title">Resource Usage & Cost Impact Overview</div>
+                
+                <!-- Top Metrics Row -->
+                <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+                    <div class="kpi-item" style="border-left-color: #24a148;">
+                        <div class="kpi-item-value" id="costValue">$000.0</div>
+                        <div class="kpi-item-label">Monthly bill</div>
+                        <div class="trend positive" id="costTrend" style="margin-top: 4px;">Within limit</div>
                     </div>
-                    <div class="comparison-item">
-                        <div class="comparison-value">$28.5K</div>
-                        <div class="comparison-label">Cost Savings</div>
+                    <div class="kpi-item" style="border-left-color: #0f62fe;">
+                        <div class="kpi-item-value" id="dataIngestionValue">85%</div>
+                        <div class="kpi-item-label">Data Ingestion</div>
+                        <div class="badge badge-success" id="dataIngestionBadge" style="margin-top: 4px;">Within Limits</div>
                     </div>
-                </div>
-                <div id="costChart" class="chart-container"></div>
-            </div>
-            
-            <div class="card card-large">
-                <div class="card-title">Aggregated Application Health</div>
-                <div class="kpi-grid">
-                    <div class="kpi-item">
-                        <div class="kpi-item-value">247</div>
-                        <div class="kpi-item-label">Total Applications Monitored</div>
+                    <div class="kpi-item" style="border-left-color: #0f62fe;">
+                        <div class="kpi-item-value" id="standardMVSValue">70%</div>
+                        <div class="kpi-item-label">Standard MVS</div>
+                        <div class="badge badge-success" id="standardMVSBadge" style="margin-top: 4px;">Low Usage</div>
                     </div>
-                    <div class="kpi-item">
-                        <div class="kpi-item-value">3</div>
-                        <div class="kpi-item-label">Critical State</div>
-                    </div>
-                    <div class="kpi-item">
-                        <div class="kpi-item-value">12</div>
-                        <div class="kpi-item-label">Top Services in Error</div>
-                    </div>
-                    <div class="kpi-item">
-                        <div class="kpi-item-value">1,247</div>
-                        <div class="kpi-item-label">Avg Calls/Second</div>
+                    <div class="kpi-item" style="border-left-color: #009d9a;">
+                        <div class="kpi-item-value" id="essentialsMVSValue">80%</div>
+                        <div class="kpi-item-label">Essentials MVS</div>
+                        <div class="badge badge-success" id="essentialsMVSBadge" style="margin-top: 4px;">Optimal</div>
                     </div>
                 </div>
-                <div class="badge badge-success">98.8% Healthy</div>
-                <div id="healthChart" class="chart-container"></div>
+                
+                <!-- Charts Row -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                    <div>
+                        <div style="font-size: 12px; font-weight: 600; color: #161616; margin-bottom: 8px;">Cost Trend</div>
+                        <div id="costChart" class="chart-container" style="height: 160px;"></div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 600; color: #161616; margin-bottom: 8px;">Data Ingestion</div>
+                        <div id="dataIngestionChart" class="chart-container" style="height: 160px;"></div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 600; color: #161616; margin-bottom: 8px;">MVS Usage</div>
+                        <div id="mvsChart" class="chart-container" style="height: 160px;"></div>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- Row 2: Data Usage & MVS -->
+        <!-- Row 2: Alert Effectiveness & Alert Insights -->
         <div class="grid">
-            <div class="card card-full">
-                <div class="card-title">Data and MVS Usage</div>
-                <div class="legend">
-                    <div class="legend-item">
-                        <div class="legend-color color-blue"></div>
-                        <span>Standard MVS</span>
+            <!-- Alert Effectiveness Card -->
+            <div class="card card-large" id="alertCard">
+                <div class="card-title">Alert effectiveness</div>
+                <div style="display: flex; flex-direction: column; gap: 24px; padding: 8px 0;">
+                    <!-- Top Section: Percentage and Fraction -->
+                    <div style="display: flex; gap: 24px; align-items: flex-end;">
+                        <div>
+                            <div style="font-size: 64px; font-weight: 300; color: #161616; line-height: 1;">87%</div>
+                            <div style="font-size: 14px; color: #525252; margin-top: 4px;">Effective</div>
+                        </div>
                     </div>
-                    <div class="legend-item">
-                        <div class="legend-color color-teal"></div>
-                        <span>Essentials MVS</span>
+                    
+                    <!-- Fraction and Progress Bar -->
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <div style="display: flex; align-items: baseline; gap: 8px;">
+                            <div style="font-size: 32px; font-weight: 300; color: #161616; line-height: 1;">1000/1234</div>
+                            <div style="font-size: 14px; color: #525252;">acted on</div>
+                        </div>
+                        
+                        <!-- Horizontal Progress Bar -->
+                        <div id="alertEffectivenessBar" style="width: 100%; height: 80px; display: flex; border-radius: 0; overflow: hidden;">
+                            <div style="background: #0f62fe; flex: 1234;"></div>
+                            <div style="background: #24a148; flex: 600;"></div>
+                            <div style="background: #d12771; flex: 234;"></div>
+                        </div>
                     </div>
-                    <div class="legend-item">
-                        <div class="legend-color color-purple"></div>
-                        <span>Traces</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color color-magenta"></div>
-                        <span>Synthetic Tests</span>
+                    
+                    <!-- Bottom Metrics with Colored Borders -->
+                    <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 8px;">
+                        <div style="background: #f4f4f4; padding: 16px; border-radius: 4px; border-left: 4px solid #0f62fe;">
+                            <div style="font-size: 28px; font-weight: 300; color: #161616; line-height: 1;" id="autoResolvedAlerts">400</div>
+                            <div style="font-size: 13px; color: #525252; margin-top: 6px;">Incidents auto resolved</div>
+                        </div>
+                        <div style="background: #f4f4f4; padding: 16px; border-radius: 4px; border-left: 4px solid #24a148;">
+                            <div style="font-size: 28px; font-weight: 300; color: #161616; line-height: 1;" id="acknowledgedIncidents">600</div>
+                            <div style="font-size: 13px; color: #525252; margin-top: 6px;">incidents acknowledged</div>
+                        </div>
+                        <div style="background: #f4f4f4; padding: 16px; border-radius: 4px; border-left: 4px solid #d12771;">
+                            <div style="font-size: 28px; font-weight: 300; color: #161616; line-height: 1;" id="noiseAlerts">234</div>
+                            <div style="font-size: 13px; color: #525252; margin-top: 6px;">noise</div>
+                        </div>
                     </div>
                 </div>
-                <div id="mvsChart" class="chart-container"></div>
+            </div>
+            
+            <!-- Alert Insights Card -->
+            <div class="card card-large" id="alertInsightsCard">
+                <div class="card-title">Alert insights</div>
+                <div style="display: flex; flex-direction: column; gap: 24px; padding: 16px 0;">
+                    <div style="background: #f4f4f4; padding: 24px; border-radius: 4px; border-left: 4px solid #0f62fe;">
+                        <div style="font-size: 48px; font-weight: 300; color: #161616; line-height: 1;" id="smartAlerts">600</div>
+                        <div style="font-size: 14px; color: #525252; margin-top: 8px;">Smart alerts triggered</div>
+                    </div>
+                    <div style="background: #f4f4f4; padding: 24px; border-radius: 4px; border-left: 4px solid #0f62fe;">
+                        <div style="font-size: 48px; font-weight: 300; color: #161616; line-height: 1;" id="rootCauseAlerts">99.9%</div>
+                        <div style="font-size: 14px; color: #525252; margin-top: 8px;">Root cause identified</div>
+                    </div>
+                    <div style="background: #f4f4f4; padding: 24px; border-radius: 4px; border-left: 4px solid #0f62fe;">
+                        <div style="font-size: 48px; font-weight: 300; color: #161616; line-height: 1;"><span id="detectionSpeed">3.2</span> <span style="font-size: 20px; color: #525252;">ms</span></div>
+                        <div style="font-size: 14px; color: #525252; margin-top: 8px;">Avg time to detection</div>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- Row 3: Signal to Noise & MTTR -->
+        <!-- Row 3: Application Health & Application Insights -->
         <div class="grid">
-            <div class="card card-medium">
-                <div class="card-title">Signal to Noise Ratio</div>
-                <div class="metric-value">87%</div>
-                <div class="metric-label">ALERT EFFECTIVENESS RATE</div>
-                <div class="comparison">
-                    <div class="comparison-item">
-                        <div class="comparison-value">1,247</div>
-                        <div class="comparison-label">Alerts Generated</div>
+            <!-- Aggregate Application Health Card -->
+            <div class="card card-large" id="healthCard">
+                <div class="card-title">Aggregate application health</div>
+                <div style="display: flex; flex-direction: column; gap: 24px; padding: 8px 0;">
+                    <!-- Donut Chart with Health Score -->
+                    <div style="display: flex; justify-content: center; padding: 16px 0; position: relative;">
+                        <div id="healthChart" style="height: 200px; width: 200px;"></div>
                     </div>
-                    <div class="comparison-item">
-                        <div class="comparison-value">1,085</div>
-                        <div class="comparison-label">Actionable</div>
-                    </div>
-                </div>
-                <div class="badge badge-info">Low Alert Fatigue</div>
-                <div id="signalChart" class="chart-container"></div>
-            </div>
-            
-            <div class="card card-medium">
-                <div class="card-title">MTTD & Auto Resolution Rate</div>
-                <div class="metric-value">3.2 min</div>
-                <div class="metric-label">MEAN TIME TO DETECTION</div>
-                <div class="trend positive">↓ 62% improvement</div>
-                <div class="comparison">
-                    <div class="comparison-item">
-                        <div class="comparison-value">342</div>
-                        <div class="comparison-label">Incidents Detected</div>
-                    </div>
-                    <div class="comparison-item">
-                        <div class="comparison-value">218</div>
-                        <div class="comparison-label">Auto-Resolved</div>
-                    </div>
-                    <div class="comparison-item">
-                        <div class="comparison-value">64%</div>
-                        <div class="comparison-label">Auto-Resolution Rate</div>
+                    
+                    <!-- Metrics with Blue Border -->
+                    <div style="display: flex; flex-direction: column; gap: 16px; padding-left: 16px; border-left: 4px solid #0f62fe;">
+                        <div style="background: #f4f4f4; padding: 16px; border-radius: 4px;">
+                            <div style="font-size: 28px; font-weight: 300; color: #161616; line-height: 1;">247</div>
+                            <div style="font-size: 13px; color: #525252; margin-top: 6px;">Total Applications Monitored</div>
+                        </div>
+                        <div style="background: #f4f4f4; padding: 16px; border-radius: 4px;">
+                            <div style="font-size: 28px; font-weight: 300; color: #161616; line-height: 1;" id="criticalApps">3</div>
+                            <div style="font-size: 13px; color: #525252; margin-top: 6px;">Critical State</div>
+                        </div>
+                        <div style="background: #f4f4f4; padding: 16px; border-radius: 4px;">
+                            <div style="font-size: 28px; font-weight: 300; color: #161616; line-height: 1;" id="uptime">99.97%</div>
+                            <div style="font-size: 13px; color: #525252; margin-top: 6px;">System Uptime</div>
+                        </div>
                     </div>
                 </div>
-                <div class="badge badge-success">Smart Alerts Enabled</div>
             </div>
             
-            <div class="card card-medium">
-                <div class="card-title">Application Insights</div>
-                <div class="kpi-grid">
-                    <div class="kpi-item">
-                        <div class="kpi-item-value">99.97%</div>
-                        <div class="kpi-item-label">System Uptime</div>
+            <!-- Application Insights Card -->
+            <div class="card card-large" id="appInsightsCard">
+                <div class="card-title">Application insights</div>
+                <div style="display: flex; flex-direction: column; gap: 24px; padding: 16px 0;">
+                    <div style="background: #f4f4f4; padding: 24px; border-radius: 4px; border-left: 4px solid #0f62fe;">
+                        <div style="font-size: 48px; font-weight: 300; color: #161616; line-height: 1;"><span id="latency">142</span> <span style="font-size: 20px; color: #525252;">ms</span></div>
+                        <div style="font-size: 14px; color: #525252; margin-top: 8px;">Avg latency across apps</div>
                     </div>
-                    <div class="kpi-item">
-                        <div class="kpi-item-value">142ms</div>
-                        <div class="kpi-item-label">Avg Latency Across Apps</div>
+                    <div style="background: #f4f4f4; padding: 24px; border-radius: 4px; border-left: 4px solid #0f62fe;">
+                        <div style="font-size: 48px; font-weight: 300; color: #161616; line-height: 1;">1827</div>
+                        <div style="font-size: 14px; color: #525252; margin-top: 8px;">service tracked</div>
                     </div>
-                    <div class="kpi-item">
-                        <div class="kpi-item-value">247</div>
-                        <div class="kpi-item-label">Applications Monitored</div>
-                    </div>
-                    <div class="kpi-item">
-                        <div class="kpi-item-value">1,847</div>
-                        <div class="kpi-item-label">Services Tracked</div>
+                    <div style="background: #f4f4f4; padding: 24px; border-radius: 4px; border-left: 4px solid #0f62fe;">
+                        <div style="font-size: 48px; font-weight: 300; color: #161616; line-height: 1;">1247</div>
+                        <div style="font-size: 14px; color: #525252; margin-top: 8px;">Avg calls/ second</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     <script>
+        // Scenario data with interdependencies
+        const scenarios = {
+            happy: {
+                cost: {
+                    value: '$000.0',
+                    trend: 'Within limit',
+                    trendClass: 'positive',
+                    previous: '$156K',
+                    savings: '$42.5K',
+                    savingsLabel: 'Below Benchmark',
+                    chartData: [95000, 92000, 88000, 85000, 82000, 80000]
+                },
+                dataIngestion: {
+                    value: '85%',
+                    current: '85%',
+                    remaining: '15%',
+                    trend: '↓ 5% vs. last month',
+                    trendClass: 'positive',
+                    badge: 'Within Limits',
+                    badgeClass: 'badge-success',
+                    chartData: [90, 88, 87, 86, 85, 85]
+                },
+                mvs: {
+                    standard: {
+                        value: '70%',
+                        badge: 'Low Usage',
+                        badgeClass: 'badge-success'
+                    },
+                    essentials: {
+                        value: '80%',
+                        badge: 'Optimal',
+                        badgeClass: 'badge-success'
+                    },
+                    chartData: {
+                        standard: [65, 68, 70, 69, 70, 70],
+                        essentials: [75, 78, 80, 79, 80, 80]
+                    }
+                },
+                health: {
+                    critical: 3,
+                    uptime: '99.97%',
+                    latency: '142',
+                    chartData: [244, 3],
+                    percentage: '98.8%'
+                },
+                alertEffectiveness: {
+                    percentage: '87%',
+                    fraction: '1234/1000',
+                    autoResolved: '400',
+                    smartAlerts: '600',
+                    acknowledged: '600',
+                    rootCause: '99.9%',
+                    noise: '234',
+                    detectionSpeed: '3.2'
+                },
+                signal: {
+                    value: '87%',
+                    generated: '1,247',
+                    actionable: '1,085',
+                    badge: 'Low Alert Fatigue',
+                    badgeClass: 'badge-info',
+                    chartData: [72, 76, 80, 83, 85, 87]
+                },
+                mttd: {
+                    value: '3.2 min',
+                    trend: '↓ 62% improvement',
+                    trendClass: 'positive',
+                    incidents: '342',
+                    badge: 'Smart Alerts Enabled',
+                    badgeClass: 'badge-success'
+                },
+                autoResolution: {
+                    rate: '64%',
+                    autoResolved: '218',
+                    badge: 'High Automation',
+                    badgeClass: 'badge-success'
+                },
+                insights: {
+                    uptime: '99.97%',
+                    latency: '142ms'
+                },
+                alert: {
+                    show: false,
+                    message: ''
+                }
+            },
+            error: {
+                cost: {
+                    value: '$215.3K',
+                    trend: '↑ 35% vs. benchmark',
+                    trendClass: 'negative',
+                    previous: '$170K',
+                    savings: '$45.3K',
+                    savingsLabel: 'Above Benchmark',
+                    chartData: [95000, 115000, 145000, 175000, 195000, 215300]
+                },
+                dataIngestion: {
+                    value: '125%',
+                    current: '125%',
+                    remaining: '-25%',
+                    trend: '↑ 25% above limit',
+                    trendClass: 'negative',
+                    badge: 'Limit Exceeded',
+                    badgeClass: 'badge-warning',
+                    chartData: [85, 95, 105, 112, 118, 125]
+                },
+                mvs: {
+                    standard: {
+                        value: '110%',
+                        badge: 'Exceeded',
+                        badgeClass: 'badge-warning'
+                    },
+                    essentials: {
+                        value: '135%',
+                        badge: 'Critical',
+                        badgeClass: 'badge-warning'
+                    },
+                    chartData: {
+                        standard: [70, 80, 90, 98, 105, 110],
+                        essentials: [80, 95, 110, 120, 128, 135]
+                    }
+                },
+                health: {
+                    critical: 47,
+                    uptime: '96.23%',
+                    latency: '847',
+                    chartData: [200, 47],
+                    percentage: '81.0%'
+                },
+                alertEffectiveness: {
+                    percentage: '42%',
+                    fraction: '750/1800',
+                    autoResolved: '98',
+                    smartAlerts: '187',
+                    acknowledged: '245',
+                    rootCause: '58.2%',
+                    noise: '1247',
+                    detectionSpeed: '24.5'
+                },
+                signal: {
+                    value: '52%',
+                    generated: '3,847',
+                    actionable: '2,001',
+                    badge: 'High Alert Fatigue',
+                    badgeClass: 'badge-warning',
+                    chartData: [87, 78, 69, 63, 58, 52]
+                },
+                mttd: {
+                    value: '18.7 min',
+                    trend: '↑ 284% degradation',
+                    trendClass: 'negative',
+                    incidents: '847',
+                    badge: 'Manual Intervention Required',
+                    badgeClass: 'badge-warning'
+                },
+                autoResolution: {
+                    rate: '17%',
+                    autoResolved: '142',
+                    badge: 'Low Automation',
+                    badgeClass: 'badge-warning'
+                },
+                insights: {
+                    uptime: '96.23%',
+                    latency: '847ms'
+                },
+                alert: {
+                    show: true,
+                    message: 'Data ingestion and MVS usage have exceeded limits, resulting in cost overruns. Current monthly cost: $192.8K (13% above benchmark)'
+                }
+            }
+        };
+
+        let currentScenario = 'happy';
+        let costChart, healthChart, mvsChart, signalChart, dataIngestionChart;
+
+        function switchScenario(scenario) {
+            currentScenario = scenario;
+            
+            // Update button states
+            document.querySelectorAll('.scenario-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update data
+            updateDashboard(scenarios[scenario]);
+        }
+
+        function updateDashboard(data) {
+            // Update Alert Banner
+            const alertBanner = document.getElementById('alertBanner');
+            if (data.alert.show) {
+                alertBanner.classList.add('show');
+                document.getElementById('alertMessage').textContent = data.alert.message;
+            } else {
+                alertBanner.classList.remove('show');
+            }
+            
+            // Update Unified Card - Cost
+            document.getElementById('costValue').textContent = data.cost.value;
+            document.getElementById('costTrend').textContent = data.cost.trend;
+            document.getElementById('costTrend').className = 'trend ' + data.cost.trendClass;
+            
+            // Update Unified Card - Data Ingestion
+            document.getElementById('dataIngestionValue').textContent = data.dataIngestion.value;
+            document.getElementById('dataIngestionBadge').textContent = data.dataIngestion.badge;
+            document.getElementById('dataIngestionBadge').className = 'badge ' + data.dataIngestion.badgeClass;
+            
+            // Update Unified Card - MVS
+            document.getElementById('standardMVSValue').textContent = data.mvs.standard.value;
+            document.getElementById('standardMVSBadge').textContent = data.mvs.standard.badge;
+            document.getElementById('standardMVSBadge').className = 'badge ' + data.mvs.standard.badgeClass;
+            document.getElementById('essentialsMVSValue').textContent = data.mvs.essentials.value;
+            document.getElementById('essentialsMVSBadge').textContent = data.mvs.essentials.badge;
+            document.getElementById('essentialsMVSBadge').className = 'badge ' + data.mvs.essentials.badgeClass;
+            
+            // Update Health Card
+            document.getElementById('criticalApps').textContent = data.health.critical;
+            document.getElementById('uptime').textContent = data.health.uptime;
+            document.getElementById('latency').textContent = data.health.latency;
+            
+            // Update Alert Effectiveness Card
+            document.getElementById('autoResolvedAlerts').textContent = data.alertEffectiveness.autoResolved;
+            document.getElementById('smartAlerts').textContent = data.alertEffectiveness.smartAlerts;
+            document.getElementById('acknowledgedIncidents').textContent = data.alertEffectiveness.acknowledged;
+            document.getElementById('rootCauseAlerts').textContent = data.alertEffectiveness.rootCause;
+            document.getElementById('noiseAlerts').textContent = data.alertEffectiveness.noise;
+            document.getElementById('detectionSpeed').textContent = data.alertEffectiveness.detectionSpeed;
+            
+            // Update Signal Card
+            document.getElementById('signalValue').textContent = data.signal.value;
+            document.getElementById('alertsGenerated').textContent = data.signal.generated;
+            document.getElementById('alertsActionable').textContent = data.signal.actionable;
+            document.getElementById('signalBadge').textContent = data.signal.badge;
+            document.getElementById('signalBadge').className = 'badge ' + data.signal.badgeClass;
+            
+            // Update MTTD Card
+            document.getElementById('mttdValue').textContent = data.mttd.value;
+            document.getElementById('mttdTrend').textContent = data.mttd.trend;
+            document.getElementById('mttdTrend').className = 'trend ' + data.mttd.trendClass;
+            document.getElementById('incidentsDetected').textContent = data.mttd.incidents;
+            document.getElementById('mttdBadge').textContent = data.mttd.badge;
+            document.getElementById('mttdBadge').className = 'badge ' + data.mttd.badgeClass;
+            
+            // Update Auto Resolution Card
+            document.getElementById('autoResolutionRate').textContent = data.autoResolution.rate;
+            document.getElementById('autoResolved').textContent = data.autoResolution.autoResolved;
+            document.getElementById('autoResolutionBadge').textContent = data.autoResolution.badge;
+            document.getElementById('autoResolutionBadge').className = 'badge ' + data.autoResolution.badgeClass;
+            
+            // Update charts
+            updateCharts(data);
+        }
+
+        function updateCharts(data) {
+            // Update Cost Chart
+            if (costChart) {
+                costChart.data.datasets[0].data = data.cost.chartData;
+                costChart.update();
+            }
+            
+            // Update Data Ingestion Chart
+            if (dataIngestionChart) {
+                dataIngestionChart.data.datasets[0].data = data.dataIngestion.chartData;
+                dataIngestionChart.update();
+            }
+            
+            // Update MVS Chart
+            if (mvsChart) {
+                mvsChart.data.datasets[0].data = data.mvs.chartData.standard;
+                mvsChart.data.datasets[1].data = data.mvs.chartData.essentials;
+                mvsChart.update();
+            }
+            
+            // Update Health Chart
+            if (healthChart) {
+                healthChart.data.datasets[0].data = data.health.chartData;
+                healthChart.update();
+            }
+            
+            // Update Signal Chart
+            if (signalChart) {
+                signalChart.data.datasets[0].data = data.signal.chartData;
+                signalChart.update();
+            }
+        }
+
         // Wait for DOM and Chart.js to load
         window.addEventListener('DOMContentLoaded', function() {
             // Cost Trend Chart
@@ -443,28 +840,47 @@
             if (costCtx) {
                 const costCanvas = document.createElement('canvas');
                 costCtx.appendChild(costCanvas);
-                new Chart(costCanvas, {
+                costChart = new Chart(costCanvas, {
                     type: 'line',
                     data: {
                         labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
                         datasets: [{
                             label: 'Monthly Cost',
-                            data: [185000, 172000, 168000, 156000, 145000, 127500],
+                            data: scenarios.happy.cost.chartData,
                             borderColor: '#0f62fe',
                             backgroundColor: 'rgba(15, 98, 254, 0.1)',
                             tension: 0.4,
-                            fill: true
+                            fill: true,
+                            borderWidth: 2
+                        }, {
+                            label: 'Monthly Benchmark',
+                            data: [170000, 170000, 170000, 170000, 170000, 170000],
+                            borderColor: '#da1e28',
+                            backgroundColor: 'transparent',
+                            borderDash: [5, 5],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { display: false }
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15
+                                }
+                            }
                         },
                         scales: {
                             y: {
                                 beginAtZero: false,
+                                min: 70000,
+                                max: 230000,
                                 ticks: {
                                     callback: function(value) {
                                         return '$' + (value/1000) + 'K';
@@ -481,12 +897,12 @@
             if (healthCtx) {
                 const healthCanvas = document.createElement('canvas');
                 healthCtx.appendChild(healthCanvas);
-                new Chart(healthCanvas, {
+                healthChart = new Chart(healthCanvas, {
                     type: 'doughnut',
                     data: {
                         labels: ['Healthy', 'Critical'],
                         datasets: [{
-                            data: [244, 3],
+                            data: scenarios.happy.health.chartData,
                             backgroundColor: ['#24a148', '#da1e28'],
                             borderWidth: 0
                         }]
@@ -503,39 +919,77 @@
                 });
             }
 
-            // MVS Usage Stacked Area Chart
-            const mvsCtx = document.getElementById('mvsChart');
-            if (mvsCtx) {
-                const mvsCanvas = document.createElement('canvas');
-                mvsCtx.appendChild(mvsCanvas);
-                new Chart(mvsCanvas, {
+            // Data Ingestion Chart
+            const dataIngestionCtx = document.getElementById('dataIngestionChart');
+            if (dataIngestionCtx) {
+                const dataIngestionCanvas = document.createElement('canvas');
+                dataIngestionCtx.appendChild(dataIngestionCanvas);
+                dataIngestionChart = new Chart(dataIngestionCanvas, {
                     type: 'line',
                     data: {
                         labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
                         datasets: [{
-                            label: 'Standard MVS',
-                            data: [1200, 1350, 1500, 1650, 1800, 1950],
+                            label: 'Data Ingestion Usage',
+                            data: scenarios.happy.dataIngestion.chartData,
                             borderColor: '#0f62fe',
-                            backgroundColor: 'rgba(15, 98, 254, 0.5)',
-                            fill: true
+                            backgroundColor: 'rgba(15, 98, 254, 0.1)',
+                            tension: 0.4,
+                            fill: true,
+                            borderWidth: 2
                         }, {
-                            label: 'Essentials MVS',
-                            data: [800, 900, 1000, 1100, 1200, 1300],
-                            borderColor: '#009d9a',
-                            backgroundColor: 'rgba(0, 157, 154, 0.5)',
-                            fill: true
-                        }, {
-                            label: 'Traces',
-                            data: [450, 500, 550, 600, 650, 700],
-                            borderColor: '#8a3ffc',
-                            backgroundColor: 'rgba(138, 63, 252, 0.5)',
-                            fill: true
-                        }, {
-                            label: 'Synthetic Tests',
-                            data: [200, 250, 300, 350, 400, 450],
-                            borderColor: '#d12771',
-                            backgroundColor: 'rgba(209, 39, 113, 0.5)',
-                            fill: true
+                            label: 'Usage Limit (100%)',
+                            data: [100, 100, 100, 100, 100, 100],
+                            borderColor: '#da1e28',
+                            backgroundColor: 'transparent',
+                            borderDash: [5, 5],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'bottom',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                min: 60,
+                                max: 130,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // MVS Usage Bar Chart
+            const mvsCtx = document.getElementById('mvsChart');
+            if (mvsCtx) {
+                const mvsCanvas = document.createElement('canvas');
+                mvsCtx.appendChild(mvsCanvas);
+                mvsChart = new Chart(mvsCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
+                        datasets: [{
+                            label: 'Standard MVS',
+                            data: scenarios.happy.mvs.chartData.standard,
+                            backgroundColor: '#0f62fe',
+                            borderWidth: 0
                         }]
                     },
                     options: {
@@ -548,7 +1002,13 @@
                         },
                         scales: {
                             y: {
-                                stacked: true
+                                beginAtZero: true,
+                                max: 150,
+                                ticks: {
+                                    callback: function(value) {
+                                        return value + '%';
+                                    }
+                                }
                             }
                         }
                     }
@@ -560,13 +1020,13 @@
             if (signalCtx) {
                 const signalCanvas = document.createElement('canvas');
                 signalCtx.appendChild(signalCanvas);
-                new Chart(signalCanvas, {
+                signalChart = new Chart(signalCanvas, {
                     type: 'line',
                     data: {
                         labels: ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'],
                         datasets: [{
                             label: 'Alert Effectiveness',
-                            data: [72, 76, 80, 83, 85, 87],
+                            data: scenarios.happy.signal.chartData,
                             borderColor: '#0043ce',
                             backgroundColor: 'rgba(0, 67, 206, 0.1)',
                             tension: 0.4,
@@ -582,7 +1042,7 @@
                         scales: {
                             y: {
                                 beginAtZero: false,
-                                min: 60,
+                                min: 40,
                                 max: 100,
                                 ticks: {
                                     callback: function(value) {
