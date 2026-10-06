@@ -1,0 +1,3517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IBM Instana — SRE Dashboard · Carlos</title>
+
+  <!-- IBM Plex Sans & Mono -->
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { overflow-x: hidden; }
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      background: #f4f4f4;
+      color: #161616;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    button { font-family: inherit; cursor: pointer; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SHELL — HEADER (48px fixed, dark #161616)
+    ═══════════════════════════════════════════════════════════════ */
+    .shell-header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      background: #161616;
+      display: flex;
+      align-items: stretch;
+      z-index: 9000;
+    }
+    .shell-header__brand {
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 4px;
+      color: #f4f4f4;
+      font-size: 14px;
+      white-space: nowrap;
+      min-width: 114px;
+    }
+    .shell-header__brand-ibm { font-weight: 700; }
+    .shell-header__brand-product { font-weight: 400; }
+    .shell-header__spacer { flex: 1; }
+    .shell-header__actions { display: flex; align-items: stretch; }
+
+    /* Demo scenario toggle */
+    #demoToggleBtn {
+      display: flex; align-items: center;
+      height: 48px; padding: 0 16px;
+      background: transparent; border: none; border-left: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.45);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; letter-spacing: 0.08em;
+      cursor: pointer; transition: color 110ms; white-space: nowrap;
+    }
+    #demoToggleBtn:hover { color: rgba(255,255,255,0.75); }
+
+    .shell-header__action {
+      width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none;
+      color: #f4f4f4;
+      transition: background 110ms;
+    }
+    .shell-header__action:hover { background: #2d2d2d; }
+    .shell-header__action svg { fill: #f4f4f4; display: block; }
+
+    /* ── Persona switcher ─────────────────────────────────────────── */
+    .persona-switcher { position: relative; display: flex; align-items: stretch; }
+    .persona-switcher__btn {
+      width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #f4f4f4;
+      cursor: pointer; transition: background 110ms;
+    }
+    .persona-switcher__btn:hover,
+    .persona-switcher__btn[aria-expanded="true"] { background: #2d2d2d; }
+    .persona-switcher__btn svg { fill: #f4f4f4; display: block; }
+    .persona-dropdown {
+      display: none;
+      position: fixed; top: 48px; right: 0;
+      width: 220px;
+      background: #262626;
+      border: 1px solid #393939;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      z-index: 9100;
+    }
+    .persona-dropdown[aria-hidden="false"] { display: block; }
+    .persona-dropdown__label {
+      padding: 12px 16px 8px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.32px;
+      color: #8d8d8d; text-transform: uppercase;
+    }
+    .persona-dropdown__item {
+      display: flex; align-items: center; gap: 12px;
+      width: 100%; padding: 0 16px; height: 48px;
+      background: transparent; border: none;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px; color: #f4f4f4;
+      cursor: pointer; text-align: left;
+      transition: background 110ms; text-decoration: none;
+    }
+    .persona-dropdown__item:hover { background: #353535; }
+    .persona-dropdown__item--active { background: #393939; }
+    .persona-dropdown__avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; color: #ffffff;
+      flex-shrink: 0; line-height: 1;
+    }
+    .persona-dropdown__name { flex: 1; }
+    .persona-dropdown__check {
+      width: 16px; height: 16px; flex-shrink: 0;
+      fill: #78a9ff; display: none;
+    }
+    .persona-dropdown__item--active .persona-dropdown__check { display: block; }
+    .persona-dropdown__divider { height: 1px; background: #393939; margin: 4px 0; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SHELL — SIDE NAV (48px wide, fixed, dark #262626)
+    ═══════════════════════════════════════════════════════════════ */
+    .shell-sidenav {
+      position: fixed;
+      top: 48px; left: 0; bottom: 0;
+      width: 48px;
+      background: #262626;
+      display: flex;
+      flex-direction: column;
+      z-index: 8000;
+      overflow: hidden;
+    }
+    .sidenav-group { display: flex; flex-direction: column; }
+    .sidenav-sep { height: 1px; background: #393939; margin: 4px 0; }
+    .sidenav-item {
+      width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none;
+      border-left: 3px solid transparent;
+      color: #8d8d8d;
+      transition: background 110ms, color 110ms;
+      position: relative; flex-shrink: 0;
+    }
+    .sidenav-item:hover { background: #353535; color: #f4f4f4; }
+    .sidenav-item--active { color: #f4f4f4; background: #393939; border-left-color: #4589ff; }
+    .sidenav-item svg { fill: currentColor; display: block; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       MAIN LAYOUT
+    ═══════════════════════════════════════════════════════════════ */
+    .page-layout {
+      margin-top: 48px;
+      margin-left: 48px;
+      background: #ffffff;
+      min-height: calc(100vh - 48px);
+      transition: margin-right 220ms cubic-bezier(0.2,0,0.38,0.9);
+    }
+    body.chat-open .page-layout {
+      margin-right: 320px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       PAGE HEADER
+    ═══════════════════════════════════════════════════════════════ */
+    .page-header { background: #ffffff; padding: 0 32px; border-bottom: none; }
+    .page-header__title-row {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 76px;
+    }
+    .page-header__title { font-size: 28px; font-weight: 300; color: #161616; line-height: 1.25; }
+    .page-header__title strong { font-weight: 600; }
+
+    .period-selector {
+      display: flex; align-items: stretch;
+      border: 1px solid #c6c6c6; height: 42px;
+    }
+    .period-selector__date {
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 0 16px 0 13px; min-width: 130px;
+      cursor: pointer; background: #ffffff; border: none;
+      border-right: 1px solid #c6c6c6;
+    }
+    .period-selector__date-label { font-size: 11px; color: #525252; line-height: 1.3; }
+    .period-selector__date-range {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 14px; color: #161616; font-weight: 400;
+    }
+    .period-selector__date-range svg { fill: #161616; flex-shrink: 0; }
+    .period-selector__live {
+      display: flex; align-items: center; gap: 4px;
+      padding: 0 15px; background: #ffffff; border: none;
+      font-size: 14px; color: #161616; cursor: pointer;
+      border-left: 1px solid #c6c6c6; white-space: nowrap;
+    }
+    .period-selector__live:hover { background: #f4f4f4; }
+    .live-dot { width: 8px; height: 8px; background: #24a148; border-radius: 50%; display: inline-block; }
+    .period-selector__live .plus { font-weight: 400; color: #525252; }
+
+    .page-tabs {
+      display: flex; align-items: stretch; height: 42px;
+      border-bottom: 1px solid #c6c6c6;
+      margin: 0 -32px; padding: 0 32px;
+    }
+    .page-tab {
+      display: flex; align-items: center; padding: 0 16px;
+      font-size: 14px; color: #525252; background: transparent; border: none;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      cursor: pointer; white-space: nowrap; transition: color 110ms;
+    }
+    .page-tab:hover { color: #161616; }
+    .page-tab--active { color: #161616; border-bottom-color: #4589ff; font-weight: 500; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       FILTER BAR
+    ═══════════════════════════════════════════════════════════════ */
+    .filter-bar {
+      display: flex; align-items: stretch; height: 40px;
+      border-bottom: 1px solid #c6c6c6; background: #ffffff;
+    }
+    .filter-bar__spacer { flex: 1; min-width: 0; }
+    .filter-bar__divider { width: 1px; background: #c6c6c6; flex-shrink: 0; }
+    .filter-btn {
+      display: flex; align-items: center; gap: 4px;
+      padding: 0 16px; font-size: 14px; color: #161616;
+      background: transparent; border: none; height: 40px;
+      cursor: pointer; white-space: nowrap; transition: background 110ms;
+    }
+    .filter-btn:hover { background: #f4f4f4; }
+    .filter-btn--ghost { color: #0f62fe; }
+    .filter-btn svg { fill: currentColor; }
+    .view-btn--ai {
+      width: 40px; height: 40px; padding: 0;
+      background: #0f62fe; border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .view-btn--ai:hover { background: #0353e9; }
+    .ai-stamp {
+      display: flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; position: relative;
+    }
+    .ai-stamp::before { content: ''; position: absolute; inset: 0; border: 1.5px solid #ffffff; }
+    .ai-stamp__text {
+      font-size: 8px; font-weight: 700; color: #ffffff;
+      letter-spacing: -0.5px; line-height: 1;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       DASHBOARD CANVAS
+    ═══════════════════════════════════════════════════════════════ */
+    .dashboard-canvas { background: #f4f4f4; padding: 16px 32px 32px; }
+
+    /* ══════════════════════════════════════════════════════════════════
+       AI LEFT CARD — accent border: #4589ff → #0f62fe → #00b4d8
+    ══════════════════════════════════════════════════════════════════ */
+    .ai-left {
+      background: #f4f4f4;
+      position: relative; border: 1px solid #c6c6c6;
+      display: flex; flex-direction: column;
+      box-shadow: 0 4px 8px 0 rgba(69,137,255,0.10);
+      overflow: hidden;
+    }
+    .ai-left::after {
+      content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 1px;
+      background: linear-gradient(180deg, #4589ff 0%, #0f62fe 50%, #00b4d8 100%);
+      pointer-events: none; z-index: 10;
+    }
+    .ai-left__inner-glow {
+      position: absolute; inset: 0;
+      box-shadow: inset 0 -80px 70px -65px rgba(69,137,255,0.12);
+      pointer-events: none; z-index: 8;
+    }
+    .ai-left__header { height: 54px; display: flex; align-items: center; flex-shrink: 0; }
+    .ai-left__title-wrapper {
+      flex: 1; padding: 0 8px 0 16px; min-width: 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .ai-left__title { font-size: 16px; font-weight: 600; line-height: 22px; color: #161616; white-space: nowrap; }
+    .ai-left__icons {
+      width: 40px; height: 40px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ai-label-mini {
+      width: 16px; height: 16px; background: #0f62fe;
+      display: flex; align-items: center; justify-content: center; position: relative;
+    }
+    .ai-label-mini::before { content: ''; position: absolute; inset: 2px; border: 1px solid rgba(255,255,255,0.8); }
+    /* The .ai-label-mini__text span is now hidden; the AI SVG inside the element does the job */
+    .ai-label-mini__text { display: none; }
+
+    /* Tags */
+    .tag--green {
+      display: inline-flex; align-items: center;
+      height: 18px; padding: 0 8px;
+      background: #defbe6; color: #0e6027;
+      font-size: 12px; font-weight: 400; line-height: 1; border-radius: 9px;
+    }
+    .tag--yellow {
+      display: inline-flex; align-items: center;
+      height: 18px; padding: 0 8px;
+      background: #fdf6dd; color: #8e6a00;
+      font-size: 12px; font-weight: 400; line-height: 1; border-radius: 9px;
+    }
+    .tag--blue {
+      display: inline-flex; align-items: center;
+      height: 18px; padding: 0 8px;
+      background: #dde1ff; color: #0043ce;
+      font-size: 11px; font-weight: 400; letter-spacing: 0.16px;
+      border-radius: 100px; white-space: nowrap; flex-shrink: 0;
+    }
+    .tag--sre {
+      display: inline-flex; align-items: center;
+      height: 18px; padding: 0 8px;
+      background: #edf5ff; color: #003a8c;
+      font-size: 11px; font-weight: 400; border-radius: 100px; white-space: nowrap; flex-shrink: 0;
+    }
+    .tag--red {
+      display: inline-flex; align-items: center;
+      height: 18px; padding: 0 8px;
+      background: #fff1f1; color: #a2191f;
+      font-size: 11px; font-weight: 400; border-radius: 100px; white-space: nowrap; flex-shrink: 0;
+    }
+
+    /* AI insight tiles */
+    .ai-insight {
+      border-top: 1px solid #c6c6c6; border-bottom: 1px solid #c6c6c6;
+      flex-shrink: 0; position: relative;
+    }
+    .ai-insight + .ai-insight { border-top: none; }
+    .ai-insight__slot { padding: 8px 16px 0; }
+    .ai-insight__label {
+      font-size: 14px; font-weight: 600; line-height: 20px;
+      color: #525252; letter-spacing: 0.16px;
+    }
+    .ai-insight__label--urgent { color: #0f62fe; }
+    .ai-insight__label--warn   { color: #8e6a00; }
+    .ai-insight__value {
+      font-size: 12px; font-weight: 400; line-height: 16px;
+      color: #525252; letter-spacing: 0.32px; margin-top: 2px; padding-bottom: 16px;
+    }
+    .ai-insight__btn { height: 48px; display: flex; align-items: center; }
+    .ai-insight__ghost-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      height: 48px; padding: 0 16px;
+      font-size: 14px; font-weight: 400; color: #0f62fe;
+      background: transparent; border: none; cursor: pointer;
+      font-family: 'IBM Plex Sans', sans-serif; transition: background 110ms;
+    }
+    .ai-insight__ghost-btn:hover { background: #d0e2ff; }
+    .ai-insight__ghost-btn svg { fill: #0f62fe; flex-shrink: 0; }
+
+    /* AI Right strip */
+    .kpi-right-ai {
+      background: #edf5ff;
+      padding: 16px 56px 16px 16px;
+      position: relative; height: 169px; flex-shrink: 0;
+      display: flex; flex-direction: column; justify-content: flex-start;
+      border: 1px solid #c6c6c6; border-bottom: none;
+      box-shadow: 0 4px 8px 0 rgba(69,137,255,0.08);
+    }
+    .kpi-right-ai::after {
+      content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 2px;
+      background: linear-gradient(180deg, #4589ff 0%, #0f62fe 50%, #00b4d8 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .kpi-right-ai__meta { font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0.32px; color: #525252; margin-bottom: 12px; }
+    .kpi-right-ai__text { font-size: 28px; font-weight: 300; color: #161616; line-height: 1.32; letter-spacing: 0; }
+    .kpi-right-ai__badge {
+      position: absolute; top: 16px; right: 20px;
+      width: 16px; height: 16px; background: none;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      z-index: 1;               /* sit above ::after gradient border */
+    }
+    .kpi-right-ai__badge-inner {
+      width: 14px; height: 14px; border: 1.5px solid rgba(255,255,255,0.8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 6px; font-weight: 700; color: #fff;
+      font-family: 'IBM Plex Sans', sans-serif; letter-spacing: -0.3px; line-height: 1;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════
+       LAYOUT GRID
+    ══════════════════════════════════════════════════════════════════ */
+    .summary-and-kpi {
+      display: grid;
+      grid-template-columns: 353fr 831fr;
+      gap: 16px; margin-bottom: 16px;
+    }
+    @media (max-width: 1056px) { .summary-and-kpi { grid-template-columns: 1fr; } }
+    .summary-and-kpi__left { display: flex; flex-direction: column; align-self: stretch; min-width: 0; }
+    .summary-and-kpi__right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+    /* ══════════════════════════════════════════════════════════════════
+       KPI 2×2 GRID
+    ══════════════════════════════════════════════════════════════════ */
+    .kpi-2x2 {
+      position: relative; width: 100%;
+      border: 1px solid #e0e0e0; border-top: none;
+      background: #ffffff; box-sizing: border-box; overflow: hidden;
+    }
+    .kpi-row { display: flex; position: relative; width: 100%; }
+    .kpi-row--1 { height: 108px; border-bottom: 1px solid #e0e0e0; }
+    .kpi-row--2 { height: 106px; }
+    .kpi-cell {
+      flex: 1; min-width: 0; height: 100%; background: #ffffff;
+      padding: 16px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box;
+    }
+    .kpi-cell--right { border-left: 1px solid #e0e0e0; }
+    .kpi-cell__label { font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0.32px; color: #525252; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kpi-cell__value-wrap { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px; overflow: hidden; }
+    .kpi-cell__value { font-size: 28px; font-weight: 400; line-height: 36px; color: #161616; font-family: 'IBM Plex Sans', sans-serif; white-space: nowrap; }
+    .kpi-cell__unit { font-size: 14px; font-weight: 400; line-height: 20px; color: #525252; font-family: 'IBM Plex Sans', sans-serif; white-space: nowrap; align-self: flex-end; margin-bottom: 4px; }
+    .kpi-cell__subtitle-wrap { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px; }
+    .kpi-cell__helper { font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0.32px; color: #525252; white-space: nowrap; font-family: 'IBM Plex Sans', sans-serif; }
+    .kpi-cell__value--mono { font-family: 'IBM Plex Mono', monospace; }
+
+    .kpi-arrow {
+      position: absolute; width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; cursor: pointer; padding: 0;
+      transition: background 110ms; z-index: 2;
+    }
+    .kpi-arrow:hover { background: rgba(69,137,255,0.08); }
+    .kpi-arrow svg { fill: #0f62fe; }
+    .kpi-arrow--left-r1 { left: 43.26%; top: 60px; }
+    .kpi-arrow--left-r2 { left: 43.26%; top: 58px; }
+    .kpi-arrow--right-r1 { right: 0; top: 60px; }
+    .kpi-arrow--right-r2 { right: 0; top: 58px; }
+
+    /* ══════════════════════════════════════════════════════════════════
+       BOTTOM ROW — identical structure to Shani, content swapped
+    ══════════════════════════════════════════════════════════════════ */
+    .row-summary { display: flex; gap: 16px; height: 253px; margin-bottom: 0; }
+    .row-summary__left { display: flex; flex: 1; min-width: 0; gap: 0; }
+    .row-summary__right { flex: 1; display: flex; flex-direction: column; border: 1px solid #c6c6c6; background: #ffffff; overflow: hidden; min-width: 0; }
+
+    /* Tile 1: Avg metric */
+    .summary-tile {
+      flex: 1; min-width: 0; background: #ffffff;
+      display: flex; flex-direction: column; height: 253px;
+      position: relative; border: 1px solid #c6c6c6; box-sizing: border-box;
+    }
+    .summary-tile__title { font-size: 16px; font-weight: 600; line-height: 22px; color: #161616; padding: 16px 16px 0 16px; }
+    .summary-tile__sub { font-size: 14px; font-weight: 400; line-height: 18px; letter-spacing: 0.16px; color: #161616; padding: 8px 16px 0 16px; }
+    .summary-tile__metric { position: absolute; top: 104px; left: 16px; right: 16px; }
+    .summary-tile__big { font-size: 28px; font-weight: 400; color: #161616; line-height: 36px; font-family: 'IBM Plex Sans', sans-serif; display: flex; align-items: baseline; gap: 2px; }
+    .summary-tile__big-unit { font-size: 14px; font-weight: 400; color: #525252; letter-spacing: 0.16px; }
+    .summary-tile__trend { font-size: 12px; font-weight: 400; color: #161616; line-height: 16px; letter-spacing: 0.32px; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+    .summary-tile__arrow-btn { position: absolute; top: 190px; right: 0; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; }
+    .summary-tile__arrow-btn:hover { background: rgba(69,137,255,0.08); }
+    .summary-tile__arrow-btn svg { fill: #0f62fe; }
+
+    /* Tile 2: Split-column */
+    .closure-tile {
+      flex: 2; min-width: 0; background: #ffffff;
+      display: flex; flex-direction: column; height: 253px;
+      position: relative; border: 1px solid #c6c6c6; box-sizing: border-box; margin-left: 16px;
+    }
+    .closure-tile__header { padding: 16px 16px 0 16px; height: 54px; flex-shrink: 0; box-sizing: border-box; }
+    .closure-tile__title { font-size: 16px; font-weight: 600; line-height: 22px; color: #161616; }
+    .closure-tile__sub { font-size: 14px; font-weight: 400; line-height: 18px; letter-spacing: 0.16px; color: #161616; padding: 8px 16px 0 16px; height: 34px; box-sizing: border-box; }
+    .closure-slot { position: absolute; top: 112px; left: 16px; right: 16px; }
+    .closure-split { display: flex; align-items: flex-start; gap: 0; height: 52px; }
+    .closure-col--left { width: 146.5px; flex-shrink: 0; }
+    .closure-col--right { width: 145.5px; flex-shrink: 0; }
+    .closure-divider { width: 1px; align-self: stretch; background: #c6c6c6; flex-shrink: 0; margin: 0 7.5px; }
+    .closure-label { font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0.32px; color: #525252; margin-bottom: 4px; }
+    .closure-value { font-size: 28px; font-weight: 400; line-height: 36px; color: #161616; font-family: 'IBM Plex Sans', sans-serif; }
+    .closure-value sup { font-size: 14px; color: #525252; font-weight: 400; vertical-align: super; }
+    .closure-tile__arrow-btn { position: absolute; top: 188px; right: 0; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; }
+    .closure-tile__arrow-btn:hover { background: rgba(69,137,255,0.08); }
+    .closure-tile__arrow-btn svg { fill: #0f62fe; }
+
+    /* Tile 3: Right — error budget meter */
+    .account-top {
+      height: 152px; flex: 0 0 152px; background: #ffffff;
+      display: flex; flex-direction: column; padding: 0; overflow: hidden; position: relative;
+    }
+    .account-top__header { display: flex; align-items: center; gap: 8px; padding: 16px 16px 0 16px; flex-shrink: 0; }
+    .account-top__title { font-size: 16px; font-weight: 600; line-height: 22px; color: #161616; white-space: nowrap; }
+    .account-top__slot { padding: 8px 16px 0 16px; flex: 1; }
+    .account-pct-row { display: flex; align-items: baseline; gap: 0; margin-bottom: 8px; }
+    .account-pct { font-size: 28px; font-weight: 400; line-height: 36px; color: #161616; font-family: 'IBM Plex Sans', sans-serif; }
+    .account-pct sup { font-size: 14px; font-weight: 400; color: #525252; vertical-align: super; }
+    .account-pct-label { font-size: 14px; font-weight: 400; line-height: 18px; color: #161616; letter-spacing: 0.16px; }
+    .progress-track { height: 16px; background: #c6c6c6; flex-shrink: 0; position: relative; border-right: 1px solid #8d8d8d; }
+    .progress-fill { height: 100%; background: #4589ff; width: 73%; }
+    .progress-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0.32px; color: #161616; margin-top: 2px; }
+
+    .account-bottom {
+      height: 101px; flex: 0 0 101px;
+      display: grid; grid-template-columns: 1fr 1px 1fr 1px 1fr;
+      border-top: 1px solid #c6c6c6; background: #ffffff; overflow: hidden;
+    }
+    .account-bottom__divider { background: #c6c6c6; width: 1px; }
+    .account-stat { padding: 16px; display: flex; flex-direction: column; justify-content: flex-start; overflow: hidden; }
+    .account-stat__label { font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0.32px; color: #525252; margin-bottom: 4px; }
+    .account-stat__value { font-size: 28px; font-weight: 400; line-height: 36px; color: #161616; font-family: 'IBM Plex Sans', sans-serif; }
+    .account-stat__value sub { font-size: 14px; font-weight: 400; color: #525252; vertical-align: baseline; line-height: 1; }
+    .account-stat__note { font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0.32px; color: #161616; margin-top: 2px; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       AI CHAT PANEL — fixed right side drawer
+    ═══════════════════════════════════════════════════════════════ */
+    /* ── Carbon for AI Chat Shell — White theme ─────────────────────────────── */
+    .chat-panel {
+      position: fixed;
+      top: 48px; right: 0; bottom: 0;
+      width: 320px;
+      background: #ffffff;           /* $background White */
+      border-left: 1px solid #e0e0e0; /* $border-subtle-01 */
+      display: flex;
+      flex-direction: column;
+      z-index: 8500;
+      transform: translateX(100%);
+      transition: transform 220ms cubic-bezier(0.2,0,0.38,0.9);
+      overflow: hidden;
+    }
+    body.chat-open .chat-panel {
+      transform: translateX(0);
+    }
+
+    .chat-panel__header {
+      height: 56px;
+      background: #ffffff;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      padding: 0 8px 0 16px;
+      flex-shrink: 0;
+      gap: 4px;
+    }
+    .chat-panel__header-ai {
+      width: 36px; height: 36px;
+      background: transparent;
+      border: 2px solid #161616;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .chat-panel__header-ai-text {
+      font-size: 11px; font-weight: 700; color: #161616;
+      font-family: 'IBM Plex Sans', sans-serif;
+      letter-spacing: 0; line-height: 1;
+    }
+    .chat-panel__header-title {
+      flex: 1;
+      font-size: 16px; font-weight: 700; color: #161616;
+      letter-spacing: 0.16px;
+    }
+    .chat-panel__header-action {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #161616;
+      cursor: pointer; transition: background 110ms; flex-shrink: 0;
+    }
+    .chat-panel__header-action:hover { background: #e8e8e8; }
+    .chat-panel__header-action svg { fill: #161616; display: block; }
+    .chat-panel__header-close {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #161616;
+      cursor: pointer; transition: background 110ms; flex-shrink: 0;
+    }
+    .chat-panel__header-close:hover { background: #e8e8e8; }
+    .chat-panel__header-close svg { fill: #161616; display: block; }
+
+    .chat-panel__context {
+      display: none;
+    }
+
+    .chat-panel__messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      scroll-behavior: smooth;
+      background: #ffffff;
+    }
+    .chat-panel__messages::-webkit-scrollbar { width: 4px; }
+    .chat-panel__messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-panel__messages::-webkit-scrollbar-thumb { background: #c6c6c6; border-radius: 2px; }
+
+    .chat-welcome {
+      background: transparent;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .chat-welcome__avatar-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 12px;
+    }
+    .chat-welcome__avatar-row span {
+      font-size: 12px; color: #525252;
+      font-family: 'IBM Plex Sans', sans-serif; letter-spacing: 0.32px;
+    }
+    .chat-welcome__wx-avatar {
+      width: 32px; height: 32px;
+      flex-shrink: 0;
+    }
+    .chat-welcome__heading {
+      font-size: 16px; font-weight: 600; color: #161616;
+      line-height: 22px; letter-spacing: 0; margin: 0 0 4px;
+    }
+    .chat-welcome__sub {
+      font-size: 20px; font-weight: 300; color: #161616;
+      line-height: 28px; letter-spacing: 0; margin: 0 0 24px;
+    }
+    .chat-welcome__row { display: flex; align-items: flex-start; gap: 8px; }
+    .chat-welcome__avatar { display: none; }
+    .chat-welcome__name { display: none; }
+    .chat-welcome__text { display: none; }
+    .chat-welcome__suggestions { display: none; }
+    .chat-welcome__icon { display: none; }
+
+    .chat-suggestions {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .chat-suggestion {
+      background: #ffffff;
+      border: 1px solid #0f62fe;
+      border-radius: 20px;
+      padding: 8px 20px;
+      font-size: 14px; font-weight: 400;
+      color: #0f62fe;
+      font-family: 'IBM Plex Sans', sans-serif;
+      text-align: left; cursor: pointer;
+      transition: background 110ms, border-color 110ms;
+      line-height: 20px; letter-spacing: 0.16px;
+      display: inline-block; width: fit-content;
+    }
+    .chat-suggestion:hover {
+      background: #edf5ff;
+      border-color: #0043ce;
+      color: #0043ce;
+    }
+
+    .chat-msg { display: flex; flex-direction: column; margin-bottom: 28px; }
+    .chat-msg--user { align-items: flex-end; }
+    .chat-msg--ai { align-items: flex-start; }
+    .chat-msg__meta-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 4px;
+    }
+    .chat-msg--user .chat-msg__meta-row { flex-direction: row-reverse; }
+    .chat-msg__bubble-row { display: flex; align-items: flex-end; gap: 8px; }
+    .chat-msg--user .chat-msg__bubble-row { flex-direction: row-reverse; }
+    .chat-msg__ai-avatar {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+    }
+    .chat-msg__avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: #ff832b;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #fff;
+      flex-shrink: 0; font-family: 'IBM Plex Sans', sans-serif; line-height: 1;
+    }
+    .chat-msg__sender {
+      font-size: 12px; color: #525252;
+      letter-spacing: 0.32px;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .chat-msg__bubble {
+      max-width: 240px;
+      padding: 10px 12px;
+      font-size: 14px; line-height: 20px; letter-spacing: 0.16px;
+    }
+    .chat-msg--user .chat-msg__bubble {
+      background: #e8e8e8; color: #161616;
+      border-radius: 12px 12px 0 12px;
+    }
+    .chat-msg--ai .chat-msg__bubble {
+      background: #ffffff; color: #161616;
+      border-radius: 0 12px 12px 12px;
+    }
+    .chat-msg__feedback {
+      display: flex; align-items: center; gap: 2px;
+      margin-top: 6px;
+    }
+    .chat-feedback-btn {
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #6f6f6f;
+      cursor: pointer; transition: background 110ms, color 110ms;
+      border-radius: 2px;
+    }
+    .chat-feedback-btn:hover { background: #e8e8e8; color: #161616; }
+    .chat-feedback-btn svg { fill: currentColor; display: block; }
+    .chat-msg__bubble--chart {
+      max-width: 100%;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+    }
+    .chat-msg__time {
+      font-size: 11px; color: #8d8d8d;
+      letter-spacing: 0.32px;
+    }
+
+    .chat-typing {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 28px;
+    }
+    .chat-typing__avatar {
+      width: 36px; height: 36px; flex-shrink: 0;
+    }
+    .chat-typing__dots {
+      background: transparent;
+      padding: 4px 0; border-radius: 0;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .chat-typing__dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #8d8d8d;
+      animation: chat-dot-bounce 1.2s ease-in-out infinite;
+    }
+    .chat-typing__dot:nth-child(2) { animation-delay: 0.2s; }
+    .chat-typing__dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes chat-dot-bounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    .chat-citations { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .chat-citation {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #e8e8e8; border: 1px solid #c6c6c6;
+      padding: 2px 8px; font-size: 11px; color: #0f62fe; cursor: pointer;
+      transition: background 110ms;
+    }
+    .chat-citation:hover { background: #d1d1d1; }
+    .chat-citation svg { fill: #0f62fe; flex-shrink: 0; }
+
+    .chat-date-divider {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: #8d8d8d; letter-spacing: 0.32px;
+      margin-bottom: 28px;
+    }
+    .chat-date-divider::before,
+    .chat-date-divider::after {
+      content: ''; flex: 1; height: 1px; background: #e0e0e0;
+    }
+
+    .chat-panel__footer {
+      flex-shrink: 0;
+      background: #f0f4ff;
+      border-top: 1px solid #e0e0e0;
+    }
+    .chat-panel__actions-row {
+      display: none;
+    }
+    .chat-panel__action-btn {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #525252;
+      cursor: pointer; transition: background 110ms, color 110ms;
+    }
+    .chat-panel__action-btn:hover { background: #e8e8e8; color: #161616; }
+    .chat-panel__action-btn svg { fill: currentColor; }
+    .chat-panel__input-row {
+      display: flex; align-items: center;
+      padding: 14px 16px;
+      gap: 8px;
+      background: #ffffff;
+    }
+    .chat-panel__input-wrap {
+      flex: 1;
+      background: transparent;
+      border: none;
+      display: flex; align-items: center;
+      min-height: 24px; padding: 0;
+    }
+    .chat-panel__input {
+      flex: 1; background: transparent; border: none; outline: none;
+      font-size: 15px; color: #161616; font-family: 'IBM Plex Sans', sans-serif;
+      padding: 0; resize: none; min-height: 24px; max-height: 120px;
+      line-height: 20px; letter-spacing: 0.16px;
+    }
+    .chat-panel__input::placeholder { color: #a8a8a8; }
+    .chat-panel__send {
+      width: 32px; height: 32px;
+      background: transparent; border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background 110ms; flex-shrink: 0;
+      border-radius: 2px;
+    }
+    .chat-panel__send:hover { background: #e8e8e8; }
+    .chat-panel__send:disabled { opacity: 0.4; cursor: not-allowed; }
+    .chat-panel__send svg { fill: #525252; }
+    .chat-panel__disclaimer {
+      display: none;
+    }
+
+    .view-btn--ai--active {
+      background: #0353e9 !important;
+      box-shadow: inset 0 0 0 2px #78a9ff;
+    }
+
+
+    /* ── Trace Panel (tearsheet-style, 600px, config-driven) ───────────── */
+
+    /* Backdrop */
+    .trace-panel-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 8300;
+    }
+    body.trace-panel-open .trace-panel-backdrop {
+      display: block;
+    }
+
+    /* Panel shell */
+    .trace-panel {
+      position: fixed;
+      top: 48px; right: 0; bottom: 0;
+      width: 600px;
+      background: #ffffff;
+      border-left: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      z-index: 8400;
+      transform: translateX(100%);
+      transition: transform 220ms cubic-bezier(0.2,0,0.38,0.9);
+      overflow: hidden;
+    }
+    body.trace-panel-open .trace-panel {
+      transform: translateX(0);
+    }
+
+    /* Panel header — critical red for P1 */
+    .trace-panel__header {
+      background: #da1e28;
+      color: #ffffff;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .trace-panel__header-title {
+      flex: 1;
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0.16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .trace-panel__header-sub {
+      font-size: 12px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.8);
+      letter-spacing: 0.32px;
+      margin-top: 2px;
+    }
+    .trace-panel__header-text { flex: 1; min-width: 0; }
+    .trace-panel__p1-badge {
+      display: inline-flex;
+      align-items: center;
+      height: 20px;
+      padding: 0 8px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.5);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.16px;
+      border-radius: 2px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .trace-panel__close {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background 110ms;
+      flex-shrink: 0;
+    }
+    .trace-panel__close:hover { background: rgba(255,255,255,0.15); }
+    .trace-panel__close svg { fill: #ffffff; display: block; }
+
+    /* Tab bar */
+    .trace-panel__tabs {
+      height: 48px;
+      background: #ffffff;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: stretch;
+      flex-shrink: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .trace-panel__tabs::-webkit-scrollbar { display: none; }
+    .trace-panel__tab-btn {
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      color: #525252;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 110ms, border-color 110ms, background 110ms;
+    }
+    .trace-panel__tab-btn:hover { background: #f4f4f4; color: #161616; }
+    .trace-panel__tab-btn--active {
+      color: #0f62fe;
+      border-bottom-color: #0f62fe;
+      font-weight: 600;
+    }
+
+    /* Scrollable body */
+    .trace-panel__body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+      scrollbar-width: thin;
+      scrollbar-color: #c6c6c6 transparent;
+    }
+    .trace-panel__body::-webkit-scrollbar { width: 4px; }
+    .trace-panel__body::-webkit-scrollbar-track { background: transparent; }
+    .trace-panel__body::-webkit-scrollbar-thumb { background: #c6c6c6; border-radius: 2px; }
+
+    /* Tab panes */
+    .trace-panel__tab-pane { display: none; padding: 24px 24px 32px; }
+    .trace-panel__tab-pane--active { display: block; }
+
+    /* Sticky footer */
+    .trace-panel__footer {
+      height: 64px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 12px;
+      flex-shrink: 0;
+      background: #ffffff;
+    }
+    .tp-btn-primary {
+      display: inline-flex;
+      align-items: center;
+      height: 40px;
+      padding: 0 16px;
+      background: #0f62fe;
+      color: #ffffff;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      border: none;
+      cursor: pointer;
+      transition: background 110ms;
+      gap: 8px;
+    }
+    .tp-btn-primary:hover { background: #0353e9; }
+    .tp-btn-primary svg { fill: #ffffff; flex-shrink: 0; }
+    .tp-btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      height: 40px;
+      padding: 0 16px;
+      background: transparent;
+      color: #0f62fe;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      border: 1px solid #0f62fe;
+      cursor: pointer;
+      transition: background 110ms;
+    }
+    .tp-btn-ghost:hover { background: #d0e2ff; }
+    .tp-btn-danger-ghost {
+      display: inline-flex;
+      align-items: center;
+      height: 40px;
+      padding: 0 16px;
+      background: transparent;
+      color: #da1e28;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      border: 1px solid #da1e28;
+      cursor: pointer;
+      transition: background 110ms;
+    }
+    .tp-btn-danger-ghost:hover { background: #fff1f1; }
+
+    /* ── Tab 1: AI Summary ──────────────────────────────────────────── */
+    .tp-ai-block {
+      background: #edf5ff;
+      border-left: 3px solid #0f62fe;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .tp-ai-block__meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .tp-ai-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px; height: 20px;
+      background: #0f62fe;
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0;
+      flex-shrink: 0;
+    }
+    .tp-ai-block__label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #0043ce;
+      letter-spacing: 0.32px;
+      text-transform: uppercase;
+    }
+    .tp-ai-block__timestamp {
+      font-size: 11px;
+      color: #525252;
+      margin-left: auto;
+    }
+    .tp-ai-block__text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #161616;
+    }
+    .tp-section-heading {
+      font-size: 12px;
+      font-weight: 600;
+      color: #525252;
+      letter-spacing: 0.32px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .tp-key-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: #e0e0e0;
+      border: 1px solid #e0e0e0;
+      margin-bottom: 24px;
+    }
+    .tp-metric-cell {
+      background: #ffffff;
+      padding: 12px 14px;
+    }
+    .tp-metric-cell__label {
+      font-size: 11px;
+      font-weight: 400;
+      color: #525252;
+      letter-spacing: 0.32px;
+      margin-bottom: 4px;
+    }
+    .tp-metric-cell__value {
+      font-size: 20px;
+      font-weight: 600;
+      color: #161616;
+      font-family: 'IBM Plex Mono', monospace;
+      line-height: 1.2;
+    }
+    .tp-metric-cell__value--critical { color: #da1e28; }
+    .tp-metric-cell__value--warning  { color: #8e6a00; }
+    .tp-metric-cell__value--ok       { color: #198038; }
+
+    /* ── Tab 2: Trace Details ───────────────────────────────────────── */
+    .tp-metric-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f4f4f4;
+      gap: 16px;
+    }
+    .tp-metric-row:last-child { border-bottom: none; }
+    .tp-metric-row__key {
+      font-size: 13px;
+      font-weight: 400;
+      color: #525252;
+      flex-shrink: 0;
+    }
+    .tp-metric-row__val {
+      font-size: 13px;
+      font-weight: 500;
+      color: #161616;
+      text-align: right;
+      font-family: 'IBM Plex Mono', monospace;
+      word-break: break-all;
+    }
+    .tp-metric-row__val--critical { color: #da1e28; }
+    .tp-metric-row__val--warning  { color: #8e6a00; }
+    .tp-metric-row__val--ok       { color: #198038; }
+    .tp-callout {
+      background: #fff8f8;
+      border-left: 3px solid #da1e28;
+      padding: 12px 14px;
+      margin-top: 20px;
+      font-size: 13px;
+      color: #161616;
+      line-height: 1.5;
+    }
+    .tp-callout strong { color: #da1e28; }
+
+    /* ── Tab 3: Actions ─────────────────────────────────────────────── */
+    .tp-actions-intro {
+      font-size: 13px;
+      color: #525252;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .tp-action-list { display: flex; flex-direction: column; gap: 10px; }
+    .tp-action-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid #e0e0e0;
+      background: #ffffff;
+      cursor: pointer;
+      transition: background 110ms, border-color 110ms;
+      text-align: left;
+      width: 100%;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .tp-action-item:hover { background: #f4f4f4; border-color: #c6c6c6; }
+    .tp-action-item--primary { border-color: #0f62fe; background: #edf5ff; }
+    .tp-action-item--primary:hover { background: #d0e2ff; }
+    .tp-action-item--danger  { border-color: #da1e28; }
+    .tp-action-item--danger:hover  { background: #fff1f1; }
+    .tp-action-item__icon {
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .tp-action-item__icon svg { display: block; }
+    .tp-action-item__content { flex: 1; min-width: 0; }
+    .tp-action-item__title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #161616;
+      margin-bottom: 2px;
+    }
+    .tp-action-item--primary .tp-action-item__title { color: #0043ce; }
+    .tp-action-item--danger  .tp-action-item__title { color: #da1e28; }
+    .tp-action-item__desc {
+      font-size: 12px;
+      color: #525252;
+      line-height: 1.4;
+    }
+    .tp-action-item__badge {
+      display: inline-flex;
+      align-items: center;
+      height: 16px;
+      padding: 0 6px;
+      font-size: 10px;
+      font-weight: 500;
+      border-radius: 2px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+    .tp-action-item__badge--ai { background: #dde1ff; color: #0043ce; }
+    .tp-action-item__badge--urgent { background: #fff1f1; color: #da1e28; }
+
+    /* ── Tab 4: Team ────────────────────────────────────────────────── */
+    .tp-team-intro {
+      font-size: 13px;
+      color: #525252;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .tp-person-card {
+      border: 1px solid #e0e0e0;
+      background: #ffffff;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .tp-person-card__top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .tp-person-card__avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .tp-person-card__avatar--rj {
+      background: #fff2e8;
+      color: #ff832b;
+      border: 1px solid #ff832b;
+    }
+    .tp-person-card__name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #161616;
+    }
+    .tp-person-card__role {
+      font-size: 12px;
+      color: #525252;
+      margin-top: 1px;
+    }
+    .tp-person-card__context {
+      font-size: 13px;
+      color: #525252;
+      line-height: 1.5;
+      padding: 12px 14px;
+      background: #f4f4f4;
+      border-left: 3px solid #ff832b;
+      margin-bottom: 14px;
+    }
+    .tp-person-card__actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tp-btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 14px;
+      background: transparent;
+      color: #161616;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      border: 1px solid #c6c6c6;
+      cursor: pointer;
+      transition: background 110ms;
+    }
+    .tp-btn-secondary:hover { background: #e8e8e8; }
+    .tp-btn-orange {
+      display: inline-flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 14px;
+      background: #ff832b;
+      color: #ffffff;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      border: none;
+      cursor: pointer;
+      transition: background 110ms;
+    }
+    .tp-btn-orange:hover { background: #e67a28; }
+
+
+    /* ── P99 latency replacement tile ─────────────────────────────── */
+    .p99-latency-tile {
+      width: 236px;
+      min-height: 253px;
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-radius: 2px;
+      padding: 16px;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+    }
+    .p99-latency-tile__header {
+      font-size: 12px;
+      color: #525252;
+      font-weight: 600;
+    }
+    .p99-latency-tile__ai-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 9px;
+      color: #0043ce;
+      background: rgba(0,67,206,0.10);
+      padding: 2px 6px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+    .p99-latency-tile svg { flex: 1; }
+    @keyframes tile-animate-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .tile-animate-in {
+      animation: tile-animate-in 280ms ease forwards;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       EXPORT & NOTIFICATIONS SIDE PANEL
+       480px right drawer — three tabs: Export once / Scheduled / Alerts
+    ═══════════════════════════════════════════════════════════════ */
+    .export-panel {
+      position: fixed;
+      top: 48px; right: 0; bottom: 0;
+      width: 480px;
+      background: #ffffff;
+      border-left: 1px solid #e0e0e0;
+      display: flex; flex-direction: column;
+      z-index: 8800;
+      transform: translateX(100%);
+      transition: transform 220ms cubic-bezier(0.2,0,0.38,0.9);
+      overflow: hidden;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    body.export-open .export-panel { transform: translateX(0); }
+    body.export-open .page-layout  { margin-right: 480px; }
+    body.export-open.trace-panel-open .page-layout { margin-right: 480px; }
+
+    .export-panel__header { padding: 16px 16px 14px; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
+    .export-panel__header-top { display: flex; align-items: flex-start; gap: 10px; }
+    .export-panel__title-block { flex: 1; min-width: 0; }
+    .export-panel__title  { font-size: 18px; font-weight: 600; color: #161616; line-height: 24px; }
+    .export-panel__subtitle { font-size: 12px; color: #525252; line-height: 18px; letter-spacing: 0.16px; margin-top: 2px; }
+    .export-panel__close {
+      width: 32px; height: 32px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #525252;
+      cursor: pointer; transition: background 110ms; border-radius: 2px;
+    }
+    .export-panel__close:hover { background: #e8e8e8; color: #161616; }
+    .export-panel__close svg { fill: currentColor; display: block; }
+
+    .export-tabs { display: flex; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
+    .export-tab {
+      flex: 1; height: 40px;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      font-size: 13px; color: #525252;
+      background: transparent; border: none; border-bottom: 2px solid transparent;
+      cursor: pointer; transition: color 110ms, border-color 110ms;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .export-tab:hover { background: #f4f4f4; color: #161616; }
+    .export-tab--active { color: #161616; font-weight: 500; border-bottom-color: #4589ff; }
+    .export-tab svg { fill: currentColor; flex-shrink: 0; }
+
+    .export-panel__body { flex: 1; overflow-y: auto; padding: 20px 16px 16px; }
+    .export-panel__body::-webkit-scrollbar { width: 4px; }
+    .export-panel__body::-webkit-scrollbar-track { background: transparent; }
+    .export-panel__body::-webkit-scrollbar-thumb { background: #c6c6c6; border-radius: 2px; }
+    .export-tab-body { display: none; }
+    .export-tab-body--visible { display: block; }
+
+    .export-section-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.64px; color: #6f6f6f;
+      margin-bottom: 10px; margin-top: 20px;
+    }
+    .export-section-label:first-child { margin-top: 0; }
+
+    .export-content-list { border: 1px solid #e0e0e0; border-radius: 2px; margin-bottom: 20px; }
+    .export-content-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-bottom: 1px solid #e0e0e0; cursor: pointer;
+    }
+    .export-content-item:last-child { border-bottom: none; }
+    .export-content-item:hover { background: #f4f4f4; }
+    .export-cb {
+      width: 16px; height: 16px; flex-shrink: 0;
+      border: 1px solid #6f6f6f; border-radius: 2px;
+      background: #fff; display: flex; align-items: center; justify-content: center;
+      transition: background 110ms, border-color 110ms;
+    }
+    .export-cb--checked { background: #4589ff; border-color: #4589ff; }
+    .export-cb svg { display: none; fill: #fff; }
+    .export-cb--checked svg { display: block; }
+    .export-content-item__label { font-size: 14px; color: #161616; }
+    .export-content-item__sub   { font-size: 12px; color: #6f6f6f; line-height: 16px; }
+
+    .export-format-row { display: flex; gap: 8px; margin-bottom: 20px; }
+    .export-format-btn {
+      flex: 1; height: 40px;
+      border: 1px solid #c6c6c6; border-radius: 2px;
+      background: #fff; color: #161616; font-size: 14px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      cursor: pointer; transition: background 110ms, border-color 110ms;
+    }
+    .export-format-btn:hover { background: #f4f4f4; border-color: #8d8d8d; }
+    .export-format-btn--active { border-color: #4589ff; border-width: 2px; color: #4589ff; font-weight: 600; }
+    .export-format-btn svg { fill: currentColor; }
+
+    .export-dest-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .export-dest-btn {
+      flex: 1; min-height: 56px;
+      border: 1px solid #c6c6c6; border-radius: 2px;
+      background: #fff; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 4px;
+      transition: background 110ms, border-color 110ms; padding: 8px 4px;
+    }
+    .export-dest-btn:hover { background: #f4f4f4; border-color: #8d8d8d; }
+    .export-dest-btn--active { border-color: #4589ff; border-width: 2px; background: #edf5ff; }
+    .export-dest-btn__label { font-size: 12px; font-weight: 500; color: #161616; }
+    .export-dest-btn--active .export-dest-btn__label { color: #4589ff; }
+
+    .export-input-row { margin-bottom: 12px; }
+    .export-input-label { font-size: 12px; font-weight: 600; color: #161616; margin-bottom: 4px; display: block; }
+    .export-input {
+      width: 100%; height: 40px;
+      border: 1px solid #8d8d8d; border-radius: 2px;
+      background: #fff; padding: 0 12px;
+      font-size: 14px; color: #161616;
+      font-family: 'IBM Plex Sans', sans-serif;
+      outline: none; transition: border-color 110ms;
+    }
+    .export-input:focus { border-color: #4589ff; border-width: 2px; }
+    .export-input::placeholder { color: #a8a8a8; }
+    .export-input-hint { font-size: 11px; color: #6f6f6f; margin-top: 4px; }
+
+    .export-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .export-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px 2px 10px; border-radius: 14px;
+      background: #e0e0e0; font-size: 12px; color: #161616;
+    }
+    .export-tag__remove {
+      width: 16px; height: 16px; border: none; background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #525252; border-radius: 50%; padding: 0;
+    }
+    .export-tag__remove:hover { background: #c6c6c6; }
+    .export-tag__remove svg { fill: currentColor; display: block; }
+
+    .export-schedule-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .export-select-wrap { position: relative; }
+    .export-select {
+      width: 100%; height: 40px;
+      border: 1px solid #8d8d8d; border-radius: 2px;
+      background: #fff; padding: 0 36px 0 12px;
+      font-size: 14px; color: #161616;
+      font-family: 'IBM Plex Sans', sans-serif;
+      appearance: none; outline: none; cursor: pointer;
+    }
+    .export-select:focus { border-color: #4589ff; border-width: 2px; }
+    .export-select-wrap::after {
+      content: ''; position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      border-left: 4px solid transparent; border-right: 4px solid transparent;
+      border-top: 5px solid #525252; pointer-events: none;
+    }
+
+    .export-preview {
+      background: #f4f4f4; border: 1px solid #e0e0e0;
+      border-radius: 2px; padding: 14px; margin-bottom: 8px;
+    }
+    .export-preview__row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 4px 0; border-bottom: 1px solid #e0e0e0; font-size: 13px;
+    }
+    .export-preview__row:last-child { border-bottom: none; }
+    .export-preview__key { color: #6f6f6f; }
+    .export-preview__val { color: #161616; font-weight: 500; text-align: right; max-width: 220px; }
+
+    .export-toggle-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 2px;
+      margin-bottom: 8px; cursor: pointer;
+    }
+    .export-toggle-row:hover { background: #f4f4f4; }
+    .export-toggle-label { flex: 1; font-size: 14px; color: #161616; }
+    .export-toggle-label span { display: block; font-size: 12px; color: #525252; margin-top: 2px; }
+    .export-toggle-track {
+      width: 36px; height: 20px; border-radius: 10px;
+      background: #8d8d8d; position: relative; transition: background 150ms; flex-shrink: 0;
+    }
+    .export-toggle-track--on { background: #4589ff; }
+    .export-toggle-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #fff; transition: transform 150ms;
+    }
+    .export-toggle-track--on .export-toggle-thumb { transform: translateX(16px); }
+
+    .export-alert-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    .export-alert-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 2px; cursor: pointer;
+      font-size: 13px; border: 1px solid transparent;
+      background: transparent; transition: all 110ms;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .export-alert-chip__dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .export-alert-chip--critical { border-color: #da1e28; color: #da1e28; }
+    .export-alert-chip--high     { border-color: #ad6f00; color: #ad6f00; }
+    .export-alert-chip--warn     { border-color: #f1c21b; color: #a56400; }
+    .export-alert-chip--active.export-alert-chip--critical { background: #fff1f1; font-weight: 600; }
+    .export-alert-chip--active.export-alert-chip--high     { background: #fff8e1; font-weight: 600; }
+    .export-alert-chip--active.export-alert-chip--warn     { background: #fff8e1; font-weight: 600; }
+
+    .export-panel__footer {
+      border-top: 1px solid #e0e0e0; padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0; background: #fff;
+    }
+    .export-btn-primary {
+      flex: 1; height: 40px;
+      background: #4589ff; color: #fff;
+      border: none; border-radius: 2px;
+      font-size: 14px; font-weight: 600;
+      font-family: 'IBM Plex Sans', sans-serif;
+      cursor: pointer; transition: background 110ms;
+    }
+    .export-btn-primary:hover { background: #0353e9; }
+    .export-btn-ghost {
+      height: 40px; padding: 0 16px;
+      background: #fff; color: #4589ff;
+      border: 1px solid #4589ff; border-radius: 2px;
+      font-size: 14px; font-family: 'IBM Plex Sans', sans-serif;
+      cursor: pointer; transition: background 110ms;
+    }
+    .export-btn-ghost:hover { background: #edf5ff; }
+
+    .export-toast {
+      position: fixed; top: 58px; right: 16px;
+      min-width: 280px; max-width: 340px;
+      background: #defbe6; border-left: 4px solid #24a148;
+      border-radius: 2px; padding: 12px 14px;
+      display: flex; align-items: flex-start; gap: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 9500;
+      opacity: 0; transform: translateY(-8px);
+      transition: opacity 200ms, transform 200ms; pointer-events: none;
+    }
+    .export-toast--visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .export-toast__icon { fill: #24a148; flex-shrink: 0; margin-top: 1px; }
+    .export-toast__title { font-size: 14px; font-weight: 600; color: #161616; }
+    .export-toast__body  { font-size: 12px; color: #525252; margin-top: 2px; }
+
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     SHELL HEADER
+══════════════════════════════════════════════════════════ -->
+<header class="shell-header" role="banner" aria-label="IBM Instana">
+  <div class="shell-header__brand">
+    <span class="shell-header__brand-ibm">IBM</span>
+    <span class="shell-header__brand-product">Instana</span>
+  </div>
+  <div class="shell-header__spacer"></div>
+  <div class="shell-header__actions">
+    <!-- Demo scenario toggle -->
+    <button id="demoToggleBtn" onclick="setDashboardState(_dashState === 'a' ? 'b' : 'a')" aria-label="Toggle demo scenario">SCENARIO A</button>
+    <button class="shell-header__action" aria-label="Share">
+      <svg width="20" height="20" viewBox="0 0 17 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13.1407 11.2697C12.6729 11.272 12.2115 11.3794 11.7907 11.5838C11.3699 11.7883 11.0004 12.0846 10.7094 12.4509L6.14068 9.59466C6.30719 9.05726 6.30719 8.48206 6.14068 7.94466L10.7094 5.08841C11.1731 5.66261 11.8251 6.05414 12.5499 6.19366C13.2746 6.33318 14.0254 6.21168 14.6691 5.85068C15.3129 5.48967 15.8081 4.91247 16.067 4.22131C16.3259 3.53016 16.3319 2.76967 16.0838 2.07455C15.8357 1.37944 15.3496 0.794571 14.7115 0.423553C14.0735 0.0525344 13.3247 -0.0806849 12.5979 0.0474939C11.8711 0.175673 11.213 0.556976 10.7404 1.12386C10.2678 1.69074 10.011 2.40661 10.0157 3.14466C10.0186 3.42415 10.0607 3.70184 10.1407 3.96966L5.57193 6.82591C5.16858 6.31815 4.61727 5.94844 3.9944 5.76803C3.37153 5.58762 2.70797 5.60545 2.09569 5.81904C1.48341 6.03264 0.952735 6.43141 0.577233 6.9601C0.201732 7.48878 0 8.12119 0 8.76966C0 9.41813 0.201732 10.0505 0.577233 10.5792C0.952735 11.1079 1.48341 11.5067 2.09569 11.7203C2.70797 11.9339 3.37153 11.9517 3.9944 11.7713C4.61727 11.5909 5.16858 11.2212 5.57193 10.7134L10.1407 13.5697C10.0607 13.8375 10.0186 14.1152 10.0157 14.3947C10.0157 15.0127 10.199 15.6169 10.5423 16.1308C10.8857 16.6447 11.3738 17.0453 11.9448 17.2818C12.5158 17.5183 13.1441 17.5802 13.7503 17.4596C14.3565 17.339 14.9133 17.0414 15.3504 16.6044C15.7874 16.1673 16.0851 15.6105 16.2056 15.0043C16.3262 14.3981 16.2643 13.7698 16.0278 13.1988C15.7913 12.6278 15.3907 12.1397 14.8768 11.7963C14.3629 11.4529 13.7587 11.2697 13.1407 11.2697ZM13.1407 1.26966C13.5115 1.26966 13.874 1.37963 14.1824 1.58565C14.4907 1.79168 14.731 2.08452 14.873 2.42713C15.0149 2.76974 15.052 3.14674 14.9797 3.51045C14.9073 3.87417 14.7287 4.20826 14.4665 4.47048C14.2043 4.73271 13.8702 4.91128 13.5065 4.98363C13.1428 5.05598 12.7658 5.01885 12.4231 4.87693C12.0805 4.73502 11.7877 4.4947 11.5817 4.18635C11.3756 3.87801 11.2657 3.5155 11.2657 3.14466C11.2657 2.64738 11.4632 2.17046 11.8149 1.81883C12.1665 1.4672 12.6434 1.26966 13.1407 1.26966ZM3.14068 10.6447C2.76984 10.6447 2.40733 10.5347 2.09898 10.3287C1.79064 10.1226 1.55032 9.8298 1.4084 9.48719C1.26649 9.14458 1.22936 8.76758 1.30171 8.40386C1.37405 8.04015 1.55263 7.70606 1.81485 7.44383C2.07708 7.18161 2.41117 7.00303 2.77488 6.93069C3.1386 6.85834 3.5156 6.89547 3.85821 7.03738C4.20082 7.1793 4.49366 7.41962 4.69968 7.72797C4.90571 8.03631 5.01568 8.39882 5.01568 8.76966C5.01568 9.26694 4.81814 9.74385 4.4665 10.0955C4.11487 10.4471 3.63796 10.6447 3.14068 10.6447ZM13.1407 16.2697C12.7698 16.2697 12.4073 16.1597 12.099 15.9537C11.7906 15.7476 11.5503 15.4548 11.4084 15.1122C11.2665 14.7696 11.2294 14.3926 11.3017 14.0289C11.3741 13.6652 11.5526 13.3311 11.8149 13.0688C12.0771 12.8066 12.4112 12.628 12.7749 12.5557C13.1386 12.4833 13.5156 12.5205 13.8582 12.6624C14.2008 12.8043 14.4937 13.0446 14.6997 13.353C14.9057 13.6613 15.0157 14.0238 15.0157 14.3947C15.0157 14.8919 14.8181 15.3689 14.4665 15.7205C14.1149 16.0721 13.638 16.2697 13.1407 16.2697Z" fill="#f4f4f4"/></svg>
+    </button>
+    <button class="shell-header__action" aria-label="Help">
+      <svg width="20" height="20" viewBox="0 0 32 32"><path d="M16 2a14 14 0 1014 14A14 14 0 0016 2zm0 26a12 12 0 1112-12 12 12 0 01-12 12zm-1-17h2v2h-2zm0 4h2v8h-2z"/></svg>
+    </button>
+    <!-- Persona switcher -->
+    <div class="persona-switcher" id="personaSwitcher">
+      <button class="persona-switcher__btn" id="personaBtn"
+        aria-label="Switch persona" aria-haspopup="true" aria-expanded="false"
+        onclick="togglePersonaMenu(event)">
+        <svg width="20" height="20" viewBox="0 0 32 32"><path d="M16 4a5 5 0 11-5 5 5 5 0 015-5m0-2a7 7 0 107 7 7 7 0 00-7-7zM26 30h-2v-5a5 5 0 00-5-5h-6a5 5 0 00-5 5v5H6v-5a7 7 0 017-7h6a7 7 0 017 7z"/></svg>
+      </button>
+      <div class="persona-dropdown" id="personaMenu" role="menu" aria-hidden="true">
+        <div class="persona-dropdown__label">Switch dashboard</div>
+        <a class="persona-dropdown__item" role="menuitem" href="instana-bvd-dashboard.html" data-persona="shani">
+          <div class="persona-dropdown__avatar" style="background:#a56eff">S</div>
+          <span class="persona-dropdown__name">Shani — Executive</span>
+          <svg class="persona-dropdown__check" viewBox="0 0 32 32"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9z"/></svg>
+        </a>
+        <a class="persona-dropdown__item" role="menuitem" href="instana-carlos-dashboard.html" data-persona="carlos">
+          <div class="persona-dropdown__avatar" style="background:#4589ff">C</div>
+          <span class="persona-dropdown__name">Carlos — SRE</span>
+          <svg class="persona-dropdown__check" viewBox="0 0 32 32"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9z"/></svg>
+        </a>
+        <a class="persona-dropdown__item" role="menuitem" href="instana-rj-dashboard.html" data-persona="rj">
+          <div class="persona-dropdown__avatar" style="background:#ff832b">R</div>
+          <span class="persona-dropdown__name">RJ — DevOps</span>
+          <svg class="persona-dropdown__check" viewBox="0 0 32 32"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9z"/></svg>
+        </a>
+        <a class="persona-dropdown__item" role="menuitem" href="#" data-persona="unknown">
+          <div class="persona-dropdown__avatar" style="background:#6f6f6f">?</div>
+          <span class="persona-dropdown__name">Unknown user</span>
+          <svg class="persona-dropdown__check" viewBox="0 0 32 32"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════
+     SIDE NAV
+══════════════════════════════════════════════════════════ -->
+<nav class="shell-sidenav" role="navigation" aria-label="Side navigation">
+
+  <!-- ── Group 1: primary nav (6 icons) ── -->
+  <div class="sidenav-group">
+
+    <!-- 1. Home — filled house with chimney, door cutout — active state -->
+    <button class="sidenav-item sidenav-item--active" aria-label="Home" aria-current="page">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M10 2.5L2 8.5V17.5H7.5V12.5H12.5V17.5H18V8.5L10 2.5Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" fill="none"/>
+        <path d="M7.5 17.5V12.5H12.5V17.5" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </button>
+
+    <!-- 2. Infrastructure tree — two rows of boxes connected vertically -->
+    <button class="sidenav-item" aria-label="Summary">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="7" y="2" width="6" height="4" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <line x1="10" y1="6" x2="10" y2="8.5" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="4.5" y1="8.5" x2="15.5" y2="8.5" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="4.5" y1="8.5" x2="4.5" y2="10" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="10" y1="8.5" x2="10" y2="10" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="15.5" y1="8.5" x2="15.5" y2="10" stroke="currentColor" stroke-width="1.1"/>
+        <rect x="2" y="10" width="5" height="4" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <rect x="7.5" y="10" width="5" height="4" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <rect x="13" y="10" width="5" height="4" stroke="currentColor" stroke-width="1.1" fill="none"/>
+      </svg>
+    </button>
+
+    <!-- 3. Layers / stack — three overlapping parallelogram layers -->
+    <button class="sidenav-item" aria-label="Events">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M10 2L18 6L10 10L2 6Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" fill="none"/>
+        <path d="M2 10L10 14L18 10" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" fill="none"/>
+        <path d="M2 14L10 18L18 14" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </button>
+
+    <!-- 4. Monitor / laptop — screen with base stand -->
+    <button class="sidenav-item" aria-label="Applications">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="2" y="3" width="16" height="11" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <line x1="7" y1="17" x2="13" y2="17" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        <line x1="10" y1="14" x2="10" y2="17" stroke="currentColor" stroke-width="1.1"/>
+      </svg>
+    </button>
+
+    <!-- 5. Pulse / waveform — ECG line -->
+    <button class="sidenav-item" aria-label="Infrastructure">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <polyline points="1,10 5,10 7,4 9,16 11,7 13,13 15,10 19,10" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+      </svg>
+    </button>
+
+    <!-- 6. People — two figures side by side -->
+    <button class="sidenav-item" aria-label="Metrics">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="7.5" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <path d="M2 17.5C2 14.5 4.5 12 7.5 12S13 14.5 13 17.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+        <circle cx="14" cy="5.5" r="2" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <path d="M13 12.2C13.6 12.1 14.3 12 14 12C16.8 12 19 14.3 19 17.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+      </svg>
+    </button>
+
+  </div>
+
+  <!-- ── Separator + Group 2 ── -->
+  <div class="sidenav-sep"></div>
+  <div class="sidenav-group">
+
+    <!-- 7. Line chart with axis — rising chart -->
+    <button class="sidenav-item" aria-label="Analytics">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <polyline points="3,15 7,9 10,12 14,6 17,8" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+        <line x1="2" y1="2" x2="2" y2="17" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        <line x1="2" y1="17" x2="18" y2="17" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <!-- 8. Alert / warning circle -->
+    <button class="sidenav-item" aria-label="Teams">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <line x1="10" y1="5.5" x2="10" y2="11.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <circle cx="10" cy="14" r="0.85" fill="currentColor"/>
+      </svg>
+    </button>
+
+    <!-- 9. Service graph — connected rounded rectangles -->
+    <button class="sidenav-item" aria-label="Infrastructure map">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="1.5" y="7.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <rect x="7.5" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <rect x="7.5" y="13" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <rect x="13.5" y="7.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <line x1="6.5" y1="10" x2="7.5" y2="10" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="10" y1="7" x2="10" y2="7.5" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="10" y1="13" x2="10" y2="12.5" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="13.5" y1="10" x2="12.5" y2="10" stroke="currentColor" stroke-width="1.1"/>
+      </svg>
+    </button>
+
+    <!-- 10. SLOs — target / bullseye -->
+    <button class="sidenav-item" aria-label="SLOs">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <circle cx="10" cy="10" r="5" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <circle cx="10" cy="10" r="2" stroke="currentColor" stroke-width="1.1" fill="none"/>
+      </svg>
+    </button>
+
+  </div>
+
+  <!-- ── Separator + Group 3 ── -->
+  <div class="sidenav-sep"></div>
+  <div class="sidenav-group">
+
+    <!-- 11. Settings — gear with inner circle -->
+    <button class="sidenav-item" aria-label="Settings">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <path d="M16.2 10c0-.2 0-.4-.02-.6l1.58-1.24-1.5-2.6-1.94.78a6.1 6.1 0 0 0-1.04-.6L13 3.75h-3l-.28 2a6.1 6.1 0 0 0-1.04.6l-1.94-.78-1.5 2.6L6.82 9.4C6.8 9.6 6.8 9.8 6.8 10s0 .4.02.6L5.24 11.84l1.5 2.6 1.94-.78c.32.22.67.43 1.04.6L10 16.25h3l.28-2c.37-.17.72-.38 1.04-.6l1.94.78 1.5-2.6L16.18 10.6c.02-.2.02-.4.02-.6Z" stroke="currentColor" stroke-width="1.1" fill="none"/>
+      </svg>
+    </button>
+
+    <!-- 12. Lock — padlock outline -->
+    <button class="sidenav-item" aria-label="Security">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="4" y="9" width="12" height="9" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+        <circle cx="10" cy="13.5" r="1" fill="currentColor"/>
+      </svg>
+    </button>
+
+  </div>
+
+  <!-- ── Bottom icon — spacer pushes to bottom ── -->
+  <div style="flex:1"></div>
+  <div class="sidenav-sep"></div>
+
+  <!-- 13. Help — question mark in circle -->
+  <button class="sidenav-item" aria-label="Help and documentation">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.1" fill="none"/>
+      <path d="M7.5 7.5a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+      <circle cx="10" cy="14.5" r="0.85" fill="currentColor"/>
+    </svg>
+  </button>
+
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN PAGE
+══════════════════════════════════════════════════════════ -->
+<main class="page-layout" id="main-content">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="page-header__title-row">
+      <h1 class="page-header__title">Welcome to Instana, <strong>Carlos!</strong></h1>
+      <div class="period-selector" role="group" aria-label="Date range controls">
+        <button class="period-selector__date" aria-label="Change date range">
+          <span class="period-selector__date-label">Sept 10</span>
+          <span class="period-selector__date-range">
+            Last 30 days
+            <svg width="16" height="16" viewBox="0 0 32 32"><path d="M16 22L6 12l1.41-1.41L16 19.17l8.59-8.58L26 12z" fill="#161616"/></svg>
+          </span>
+        </button>
+        <button class="period-selector__live" aria-label="Live mode">
+          <span class="live-dot" aria-hidden="true"></span>
+          Live <span class="plus">+</span>
+        </button>
+      </div>
+    </div>
+    <nav class="page-tabs" role="tablist" aria-label="Dashboard views">
+      <button class="page-tab page-tab--active" role="tab" aria-selected="true">Your dashboard</button>
+    </nav>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <div class="filter-bar__spacer"></div>
+    <div class="filter-bar__divider"></div>
+    <button class="filter-btn filter-btn--ghost" aria-label="Service tier">
+      Service tier
+      <svg width="16" height="16" viewBox="0 0 32 32"><path d="M16 22L6 12l1.41-1.41L16 19.17l8.59-8.58L26 12z"/></svg>
+    </button>
+    <div class="filter-bar__divider"></div>
+    <button class="filter-btn filter-btn--ghost" aria-label="Export" aria-expanded="false" aria-controls="exportPanel" onclick="toggleExportPanel()">
+      Export
+      <svg width="16" height="16" viewBox="0 0 32 32"><path d="M16 22L6 12l1.41-1.41L16 19.17l8.59-8.58L26 12z"/></svg>
+    </button>
+    <button class="view-btn--ai" id="aiChatToggle" aria-label="Open AI assistant" aria-expanded="false" aria-controls="chatPanel" onclick="toggleChat()">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g clip-path="url(#clip0_ai_carlos)">
+          <rect width="40" height="40" fill="#0F62FE"/>
+          <g clip-path="url(#clip1_ai_carlos)">
+            <path d="M19.5 21.5L18.793 22.2071L20.5859 24H14V17.5H13V24C13 24.5523 13.4477 25 14 25H20.5859L18.793 26.7929L19.5001 27.5L22.5 24.5L19.5 21.5Z" fill="white"/>
+            <path d="M24 21V20H25V14H24V13H27V14H26V20H27V21H24Z" fill="white"/>
+            <path d="M22.5 21H23.5L20.75 13L19.25 13.0044L16.5 21H17.5L18.1666 19H21.8334L22.5 21ZM18.5 18L20 13.5L21.5 18H18.5Z" fill="white"/>
+          </g>
+        </g>
+        <defs>
+          <clipPath id="clip0_ai_carlos"><rect width="40" height="40" fill="white"/></clipPath>
+          <clipPath id="clip1_ai_carlos"><rect width="16" height="16" fill="white" transform="translate(12 12)"/></clipPath>
+        </defs>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Dashboard Canvas -->
+  <div class="dashboard-canvas">
+
+    <!-- ── AI Summary + KPI grid ── -->
+    <div class="summary-and-kpi" role="region" aria-label="SRE summary">
+
+      <!-- LEFT: AI card -->
+      <div class="summary-and-kpi__left ai-left" role="region" aria-label="AI SRE summary" id="ai-card">
+
+        <div class="ai-left__inner-glow" aria-hidden="true"></div>
+
+        <!-- STATE A — All clear (default) -->
+        <div id="state-a">
+          <div class="ai-left__header">
+            <div class="ai-left__title-wrapper">
+              <span class="ai-left__title">All clear</span>
+              <span class="tag--green" role="status">Healthy</span>
+            </div>
+            <div class="ai-left__icons" aria-label="AI generated content">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AI">
+                <rect x="0.5" y="0.5" width="15" height="15" stroke="#161616"/>
+                <path d="M8.93273 11H7.69973L7.19573 9.398H4.96373L4.46873 11H3.26273L5.36873 4.718H6.84473L8.93273 11ZM6.90773 8.381L6.09773 5.798H6.05273L5.25173 8.381H6.90773ZM12.4506 11H9.59761V10.046H10.4256V5.672H9.59761V4.718H12.4506V5.672H11.6136V10.046H12.4506V11Z" fill="#161616"/>
+              </svg>
+            </div>
+          </div>
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">2 incidents closed · MTTR 4 min</div>
+              <div class="ai-insight__value">Both within target. No user impact.</div>
+            </div>
+            <div class="ai-insight__btn">
+              <button class="ai-insight__ghost-btn" aria-label="Investigate incidents">
+                Investigate
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">28 / 28 SLOs healthy · 73% budget left</div>
+              <div class="ai-insight__value">Burn rate safe. On track to close period clean.</div>
+            </div>
+          </div>
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">3 services with elevated P99 latency</div>
+              <div class="ai-insight__value">payment-svc, cart-api, checkout. Not SLO-impacting yet.</div>
+            </div>
+            <div class="ai-insight__btn">
+              <button class="ai-insight__ghost-btn" aria-label="Review services">
+                Review services
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATE B — P1 active (hidden by default, shown on Scenario B toggle) -->
+        <div id="state-b" style="display:none">
+          <div class="ai-left__header">
+            <div class="ai-left__title-wrapper">
+              <span class="ai-left__title">Needs your attention</span>
+              <span class="tag--blue" role="status">P1 Active</span>
+            </div>
+            <div class="ai-left__icons" aria-label="AI generated content">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AI">
+                <rect x="0.5" y="0.5" width="15" height="15" stroke="#161616"/>
+                <path d="M8.93273 11H7.69973L7.19573 9.398H4.96373L4.46873 11H3.26273L5.36873 4.718H6.84473L8.93273 11ZM6.90773 8.381L6.09773 5.798H6.05273L5.25173 8.381H6.90773ZM12.4506 11H9.59761V10.046H10.4256V5.672H9.59761V4.718H12.4506V5.672H11.6136V10.046H12.4506V11Z" fill="#161616"/>
+              </svg>
+            </div>
+          </div>
+          <!-- Insight 1: URGENT -->
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">Payment Service — P1 · error rate 16.8%</div>
+              <div class="ai-insight__value">/api/v1/checkout/charge · HTTP 504 · DB pool 99% · P99 8,400ms · 2.5h budget left</div>
+            </div>
+            <div class="ai-insight__btn">
+              <button class="ai-insight__ghost-btn" aria-label="View details" data-panel="openTrace" onclick="openPanel(this.dataset.panel)">
+                View details
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+              </button>
+            </div>
+          </div>
+          <!-- Insight 2: CRITICAL -->
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">SLO burn rate 14.4×</div>
+              <div class="ai-insight__value">Error budget depletes in 2.5 hours at current rate. Customer notification threshold approaching.</div>
+            </div>
+            <div class="ai-insight__btn">
+              <button class="ai-insight__ghost-btn" aria-label="View SLO burn rate">
+                View burn
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+              </button>
+            </div>
+          </div>
+          <!-- Insight 3: WATCH -->
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">Downstream: order-svc + cart-svc degraded</div>
+              <div class="ai-insight__value">3 services · 7 hosts · 2 namespaces affected.</div>
+            </div>
+            <div class="ai-insight__btn">
+              <button class="ai-insight__ghost-btn" aria-label="View blast radius">
+                View blast radius
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /ai-left -->
+
+      <!-- RIGHT: AI strip + KPI grid -->
+      <div class="summary-and-kpi__right">
+
+        <!-- AI big message -->
+        <div class="kpi-right-ai" role="region" aria-label="AI SRE summary statement">
+          <p class="kpi-right-ai__meta" id="ai-summary-meta">10 Sept 2026 · 23 services · 0 incidents</p>
+          <p class="kpi-right-ai__text" id="ai-summary-text">28 SLOs healthy, 0 open incidents. Your shift is quiet.</p>
+          <div class="kpi-right-ai__badge" role="img" aria-label="AI generated">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="0.5" y="0.5" width="15" height="15" stroke="#161616"/>
+              <path d="M8.93273 11H7.69973L7.19573 9.398H4.96373L4.46873 11H3.26273L5.36873 4.718H6.84473L8.93273 11ZM6.90773 8.381L6.09773 5.798H6.05273L5.25173 8.381H6.90773ZM12.4506 11H9.59761V10.046H10.4256V5.672H9.59761V4.718H12.4506V5.672H11.6136V10.046H12.4506V11Z" fill="#161616"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- KPI 2×2 Grid -->
+        <div class="kpi-2x2" role="region" aria-label="Key SRE metrics">
+
+          <!-- Row 1: Active incidents · Error budget -->
+          <div class="kpi-row kpi-row--1">
+            <div class="kpi-cell">
+              <div class="kpi-cell__label">Active incidents</div>
+              <div class="kpi-cell__value-wrap">
+                <span class="kpi-cell__value" id="kpi-incidents-value" style="color:#198038">0</span>
+                <span class="kpi-cell__unit" id="kpi-incidents-unit"></span>
+              </div>
+              <div class="kpi-cell__subtitle-wrap">
+                <span class="kpi-cell__helper" id="kpi-incidents-helper">No incidents open · all SLOs healthy</span>
+              </div>
+            </div>
+            <div class="kpi-cell kpi-cell--right">
+              <div class="kpi-cell__label">Error budget (payment-svc)</div>
+              <div class="kpi-cell__value-wrap">
+                <span class="kpi-cell__value" id="kpi-budget-value" style="color:#198038">97</span>
+                <span class="kpi-cell__unit" id="kpi-budget-unit">%</span>
+              </div>
+              <div class="kpi-cell__subtitle-wrap">
+                <span class="kpi-cell__helper" id="kpi-budget-helper">Accumulating · burn rate 0.4×</span>
+              </div>
+            </div>
+            <button class="kpi-arrow kpi-arrow--left-r1" aria-label="View active incidents">
+              <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+            </button>
+            <button class="kpi-arrow kpi-arrow--right-r1" aria-label="View error budget details">
+              <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+            </button>
+          </div>
+
+          <!-- Row 2: Service error rate · P99 latency -->
+          <div class="kpi-row kpi-row--2">
+            <div class="kpi-cell">
+              <div class="kpi-cell__label">Service error rate</div>
+              <div class="kpi-cell__value-wrap">
+                <span class="kpi-cell__value" id="kpi-errorrate-value" style="color:#198038">0.4</span>
+                <span class="kpi-cell__unit" id="kpi-errorrate-unit">%</span>
+              </div>
+              <div class="kpi-cell__subtitle-wrap">
+                <span class="kpi-cell__helper" id="kpi-errorrate-helper">Baseline · all services normal</span>
+              </div>
+            </div>
+            <div class="kpi-cell kpi-cell--right">
+              <div class="kpi-cell__label">P99 latency (payment-svc)</div>
+              <div class="kpi-cell__value-wrap">
+                <span class="kpi-cell__value" id="kpi-latency-value" style="color:#198038">210</span>
+                <span class="kpi-cell__unit" id="kpi-latency-unit">ms</span>
+              </div>
+              <div class="kpi-cell__subtitle-wrap">
+                <span class="kpi-cell__helper" id="kpi-latency-helper">Well within 2,000ms SLO threshold</span>
+              </div>
+            </div>
+            <button class="kpi-arrow kpi-arrow--left-r2" aria-label="View service error rate details">
+              <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+            </button>
+            <button class="kpi-arrow kpi-arrow--right-r2" aria-label="View P99 latency details">
+              <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+            </button>
+          </div>
+
+        </div><!-- /kpi-2x2 -->
+      </div><!-- /right -->
+    </div><!-- /summary-and-kpi -->
+
+    <!-- ══════════════════════════════════════════════════════════
+         BOTTOM ROW
+    ══════════════════════════════════════════════════════════ -->
+    <div class="row-summary" role="region" aria-label="SRE operational summary">
+
+      <!-- LEFT GROUP -->
+      <div class="row-summary__left">
+
+        <!-- Tile 1: MTTR -->
+        <div class="summary-tile" id="tile-mttr">
+          <div class="summary-tile__title">MTTR (Mean time to resolve)</div>
+          <div class="summary-tile__sub">Avg across all services</div>
+          <div class="summary-tile__metric">
+            <div class="summary-tile__big">
+              4.2<span class="summary-tile__big-unit">mins</span>
+            </div>
+            <div class="summary-tile__trend" id="tile-mttr-sub">
+              <svg width="12" height="12" viewBox="0 0 32 32" aria-hidden="true"><path d="M15 4v20.17l-5.59-5.58L8 20l8 8 8-8-1.41-1.41L17 24.17V4h-2z" fill="#161616"/></svg>
+              22% vs last period
+            </div>
+          </div>
+          <button class="summary-tile__arrow-btn" aria-label="View MTTR details">
+            <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z" fill="#0f62fe"/></svg>
+          </button>
+        </div>
+
+        <!-- Tile 2: SLO health breakdown -->
+        <div class="closure-tile">
+          <div class="closure-tile__header">
+            <div class="closure-tile__title">SLO health breakdown</div>
+          </div>
+          <p class="closure-tile__sub" id="tile-slo-sub">28 total SLOs monitored. 0 breached.</p>
+          <div class="closure-slot">
+            <div class="closure-split">
+              <div class="closure-col--left">
+                <div class="closure-label">Healthy</div>
+                <div class="closure-value" id="tile-slo-healthy">96<sup>%</sup></div>
+              </div>
+              <div class="closure-divider" aria-hidden="true"></div>
+              <div class="closure-col--right">
+                <div class="closure-label">At risk</div>
+                <div class="closure-value" id="tile-slo-atrisk">4<sup>%</sup></div>
+              </div>
+            </div>
+          </div>
+          <button class="closure-tile__arrow-btn" aria-label="View SLO health details">
+            <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z" fill="#0f62fe"/></svg>
+          </button>
+        </div>
+
+      </div><!-- /row-summary__left -->
+
+      <!-- RIGHT GROUP: Error budget status -->
+      <div class="row-summary__right">
+
+        <div class="account-top">
+          <div class="account-top__header">
+            <span class="account-top__title">Error budget status</span>
+            <span class="tag--sre" id="tile-budget-tag">burn-rate active</span>
+          </div>
+          <div class="account-top__slot">
+            <div class="account-pct-row">
+              <span class="account-pct" id="tile-budget-pct">73<sup>%</sup></span>
+              <span class="account-pct-label" id="tile-budget-label">&nbsp;of error budget remaining this period</span>
+            </div>
+            <div class="progress-track" id="tile-budget-track" role="progressbar" aria-valuenow="73" aria-valuemin="0" aria-valuemax="100" aria-label="73% of error budget remaining">
+              <div class="progress-fill" id="tile-budget-fill"></div>
+            </div>
+            <div class="progress-labels">
+              <span>Budget consumed</span>
+              <span>100% available</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="account-bottom">
+          <div class="account-stat">
+            <div class="account-stat__label">Services at risk</div>
+            <div class="account-stat__value" id="tile-budget-services">3<sub></sub></div>
+            <div class="account-stat__note">burning above threshold</div>
+          </div>
+          <div class="account-bottom__divider" aria-hidden="true"></div>
+          <div class="account-stat">
+            <div class="account-stat__label">Fastest burn rate</div>
+            <div class="account-stat__value" id="tile-budget-burnrate">3.2<sub>×</sub></div>
+            <div class="account-stat__note" id="tile-budget-burnlabel">payment-svc</div>
+          </div>
+          <div class="account-bottom__divider" aria-hidden="true"></div>
+          <div class="account-stat">
+            <div class="account-stat__label">Budget resets in</div>
+            <div class="account-stat__value">21<sub>days</sub></div>
+          </div>
+        </div>
+
+      </div><!-- /row-summary__right -->
+
+    </div><!-- /row-summary -->
+
+  </div><!-- /dashboard-canvas -->
+</main>
+
+<aside class="chat-panel" id="chatPanel" aria-label="AI assistant" aria-hidden="true">
+
+  <!-- Panel header -->
+  <div class="chat-panel__header">
+    <span class="chat-panel__header-title">AI Chat</span>
+    <div class="chat-panel__header-ai" aria-hidden="true">
+      <span class="chat-panel__header-ai-text">AI</span>
+    </div>
+    <button class="chat-panel__header-action" aria-label="Restart conversation" onclick="restartChat()">
+      <svg width="12" height="15" viewBox="0 0 12 15" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M11 8.5C11 9.48891 10.7068 10.4556 10.1574 11.2779C9.60794 12.1001 8.82705 12.741 7.91342 13.1194C6.99979 13.4978 5.99446 13.5969 5.02455 13.4039C4.05465 13.211 3.16373 12.7348 2.46447 12.0355C1.76521 11.3363 1.289 10.4454 1.09608 9.47545C0.90315 8.50555 1.00217 7.50021 1.38061 6.58658C1.75904 5.67295 2.39991 4.89206 3.22215 4.34265C4.0444 3.79324 5.0111 3.5 6 3.5H9.09105L7.29885 5.2927L8 6L11 3L8 0L7.29885 0.707L9.09255 2.5H6C4.81331 2.5 3.65328 2.85189 2.66658 3.51118C1.67989 4.17047 0.910851 5.10754 0.456726 6.2039C0.00259972 7.30026 -0.11622 8.50666 0.115291 9.67054C0.346802 10.8344 0.918247 11.9035 1.75736 12.7426C2.59648 13.5818 3.66558 14.1532 4.82946 14.3847C5.99335 14.6162 7.19975 14.4974 8.2961 14.0433C9.39246 13.5892 10.3295 12.8201 10.9888 11.8334C11.6481 10.8467 12 9.68669 12 8.5H11Z" fill="#161616"/></svg>
+    </button>
+    <button class="chat-panel__header-close" aria-label="Close AI assistant" onclick="toggleChat()">
+      <svg width="14" height="12" viewBox="0 0 14 12" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M13 0H1C0.45 0 0 0.45 0 1V11C0 11.55 0.45 12 1 12H13C13.55 12 14 11.55 14 11V1C14 0.45 13.55 0 13 0ZM4 11H1V1H4V11ZM13 11H5V6.5H10.1L8.3 8.3L9 9L12 6L9 3L8.3 3.7L10.1 5.5H5V1H13V11Z" fill="#161616"/></svg>
+    </button>
+  </div>
+
+  <!-- Messages area -->
+  <div class="chat-panel__messages" id="chatMessages" role="log" aria-live="polite" aria-label="Conversation">
+
+    <!-- Welcome message -->
+    <div class="chat-welcome">
+      <div class="chat-welcome__avatar-row">
+        <svg class="chat-welcome__wx-avatar" viewBox="0 0 32 32" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="15" stroke="#a56eff" stroke-width="1.5" fill="none"/>
+          <ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none"/>
+          <ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none" transform="rotate(60 16 16)"/>
+          <ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none" transform="rotate(120 16 16)"/>
+          <circle cx="16" cy="16" r="2.5" fill="#4589ff"/>
+          <circle cx="16" cy="1" r="2" fill="#a56eff"/>
+          <circle cx="28.99" cy="8.5" r="2" fill="#4589ff"/>
+          <circle cx="3.01" cy="8.5" r="2" fill="#4589ff"/>
+        </svg>
+        <span>watsonx</span>
+      </div>
+      <p class="chat-welcome__heading">Hello, Carlos</p>
+      <p class="chat-welcome__sub" id="chat-welcome-sub">No active incidents. What do you want to dig into?</p>
+    </div>
+
+    <!-- Date divider -->
+    <div class="chat-date-divider"><span>Today</span></div>
+
+    <!-- Suggestions -->
+    <div class="chat-suggestions" id="chatSuggestions" role="group" aria-label="Suggested questions">
+      <button class="chat-suggestion" onclick="sendSuggestion(this)">What is our SLO compliance today?</button>
+      <button class="chat-suggestion" onclick="sendSuggestion(this)">Show me active alerts</button>
+      <button class="chat-suggestion" onclick="sendSuggestion(this)">Which services have degraded?</button>
+      <button class="chat-suggestion" onclick="sendSuggestion(this)">Summarise last 24h incidents</button>
+      <button class="chat-suggestion" onclick="sendSuggestion(this)" data-widget="p99-latency-chart">Add P99 latency widget</button>
+    </div>
+
+  </div><!-- /chat-panel__messages -->
+
+  <!-- Footer -->
+  <div class="chat-panel__footer">
+    <div class="chat-panel__input-row">
+      <div class="chat-panel__input-wrap">
+        <textarea
+          class="chat-panel__input"
+          id="chatInput"
+          placeholder="Ask about your infrastructure…"
+          rows="1"
+          aria-label="Message input"
+          onkeydown="handleChatKey(event)"
+          oninput="autoResizeTextarea(this)"
+        ></textarea>
+      </div>
+      <button class="chat-panel__send" id="chatSend" aria-label="Send message" onclick="sendChatMessage()">
+        <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M27.45 15.11l-22-11a1 1 0 0 0-1.08.12 1 1 0 0 0-.29 1L7 16 4.08 26.74a1 1 0 0 0 .29 1A1 1 0 0 0 5 28a1 1 0 0 0 .45-.11l22-11a1 1 0 0 0 0-1.78zm-20.9 9.49L8.76 17H18v-2H8.76L6.55 7.4 24.76 16z"/></svg>
+      </button>
+    </div>
+  </div>
+
+</aside><!-- /chat-panel -->
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TRACE PANEL BACKDROP
+═══════════════════════════════════════════════════════════════════ -->
+<div class="trace-panel-backdrop" id="tracePanelBackdrop" onclick="closeTracePanel()" aria-hidden="true"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TRACE PANEL — Tearsheet-style incident detail (600px, 4 tabs)
+     Triggered by: data-panel="openTrace" on any .ai-insight__ghost-btn
+═══════════════════════════════════════════════════════════════════ -->
+<aside class="trace-panel" id="tracePanel" aria-label="Incident detail" aria-hidden="true" role="complementary">
+
+  <!-- Header: critical red, P1 badge, close -->
+  <div class="trace-panel__header">
+    <div class="trace-panel__header-text">
+      <div class="trace-panel__header-title">Payment Service · P1 Incident</div>
+      <div class="trace-panel__header-sub">payment-svc · /api/v1/checkout/charge · Active 8 min</div>
+    </div>
+    <span class="trace-panel__p1-badge">P1 Active</span>
+    <button class="trace-panel__close" aria-label="Close incident panel" onclick="closeTracePanel()">
+      <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M24 10L22.59 8.59 16 15.17 9.41 8.59 8 10l6.59 6.59L8 23.17 9.41 24.59 16 18l6.59 6.59L24 23.17l-6.59-6.58z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="trace-panel__tabs" role="tablist" aria-label="Incident sections">
+    <button class="trace-panel__tab-btn trace-panel__tab-btn--active"
+            role="tab" aria-selected="true" aria-controls="tp-pane-summary"
+            id="tp-tab-summary" onclick="switchTraceTab('summary')">AI Summary</button>
+    <button class="trace-panel__tab-btn"
+            role="tab" aria-selected="false" aria-controls="tp-pane-trace"
+            id="tp-tab-trace" onclick="switchTraceTab('trace')">Trace Details</button>
+    <button class="trace-panel__tab-btn"
+            role="tab" aria-selected="false" aria-controls="tp-pane-actions"
+            id="tp-tab-actions" onclick="switchTraceTab('actions')">Actions</button>
+    <button class="trace-panel__tab-btn"
+            role="tab" aria-selected="false" aria-controls="tp-pane-team"
+            id="tp-tab-team" onclick="switchTraceTab('team')">Team</button>
+  </div>
+
+  <!-- Scrollable body -->
+  <div class="trace-panel__body">
+
+    <!-- ── Tab 1: AI Summary ───────────────────────────────────────── -->
+    <div class="trace-panel__tab-pane trace-panel__tab-pane--active"
+         id="tp-pane-summary" role="tabpanel" aria-labelledby="tp-tab-summary">
+
+      <!-- AI-generated summary block -->
+      <div class="tp-ai-block">
+        <div class="tp-ai-block__meta">
+          <span class="tp-ai-badge" aria-label="AI generated">AI</span>
+          <span class="tp-ai-block__label">AI-generated summary</span>
+          <span class="tp-ai-block__timestamp">10 Sept 2026 · 23:41</span>
+        </div>
+        <p class="tp-ai-block__text">
+          P1 — Payment Service error rate at 16.8% (42× baseline). SLO burn rate 14.4× —
+          2.5 hours of error budget remaining at current rate. DB connection pool at 99%
+          (198/200 connections saturated). Deploy #482 pushed 12 min ago is likely
+          correlated. Auto-scale +5 replicas running but pool ceiling not yet raised.
+          Customer notification threshold approaching.
+        </p>
+      </div>
+
+      <!-- Key signal metrics -->
+      <p class="tp-section-heading">Key signals</p>
+      <div class="tp-key-metrics">
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">Error rate</div>
+          <div class="tp-metric-cell__value tp-metric-cell__value--critical">16.8%</div>
+        </div>
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">SLO burn rate</div>
+          <div class="tp-metric-cell__value tp-metric-cell__value--critical">14.4×</div>
+        </div>
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">P99 latency</div>
+          <div class="tp-metric-cell__value tp-metric-cell__value--critical">8,400ms</div>
+        </div>
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">Error budget left</div>
+          <div class="tp-metric-cell__value tp-metric-cell__value--warning">2.5 hrs</div>
+        </div>
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">DB pool usage</div>
+          <div class="tp-metric-cell__value tp-metric-cell__value--critical">99%</div>
+        </div>
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">Incident duration</div>
+          <div class="tp-metric-cell__value">8 min</div>
+        </div>
+      </div>
+
+      <!-- Scope -->
+      <p class="tp-section-heading">Blast radius</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Services affected</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">3 (payment-svc, order-svc, cart-svc)</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Hosts affected</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">7</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Namespaces</span>
+        <span class="tp-metric-row__val">payments-prod · orders-prod</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Revenue at risk</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">~$48K</span>
+      </div>
+    </div><!-- /tp-pane-summary -->
+
+    <!-- ── Tab 2: Trace Details ────────────────────────────────────── -->
+    <div class="trace-panel__tab-pane"
+         id="tp-pane-trace" role="tabpanel" aria-labelledby="tp-tab-trace">
+
+      <p class="tp-section-heading">Endpoint</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Endpoint</span>
+        <span class="tp-metric-row__val">/api/v1/checkout/charge</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Service</span>
+        <span class="tp-metric-row__val">payment-svc</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">HTTP status</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">504 Gateway Timeout</span>
+      </div>
+
+      <p class="tp-section-heading" style="margin-top:20px">Latency</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">P99 latency</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">8,400ms</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">P99 baseline</span>
+        <span class="tp-metric-row__val tp-metric-row__val--ok">~210ms</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Latency increase</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">40× above baseline</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">SLO threshold</span>
+        <span class="tp-metric-row__val">2,000ms</span>
+      </div>
+
+      <p class="tp-section-heading" style="margin-top:20px">Error rate</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Current error rate</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">16.8%</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Baseline error rate</span>
+        <span class="tp-metric-row__val tp-metric-row__val--ok">0.4%</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Error rate increase</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">42× above baseline</span>
+      </div>
+
+      <p class="tp-section-heading" style="margin-top:20px">Infrastructure</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">DB connection pool</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">198/200 (99%)</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Auto-scale status</span>
+        <span class="tp-metric-row__val tp-metric-row__val--warning">+5 replicas running</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Pool ceiling raised</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">No</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Correlated deploy</span>
+        <span class="tp-metric-row__val tp-metric-row__val--warning">Deploy #482 · 12 min ago</span>
+      </div>
+
+      <div class="tp-callout">
+        <strong>Root cause hypothesis:</strong> DB connection pool saturation triggered by
+        Deploy #482 — likely a connection leak or missing pool limit configuration in the
+        new release. Auto-scale is compensating with replicas but the pool ceiling
+        (200 connections) has not been raised.
+      </div>
+    </div><!-- /tp-pane-trace -->
+
+    <!-- ── Tab 3: Actions ─────────────────────────────────────────── -->
+    <div class="trace-panel__tab-pane"
+         id="tp-pane-actions" role="tabpanel" aria-labelledby="tp-tab-actions">
+
+      <p class="tp-actions-intro">
+        AI-suggested probable actions ranked by expected impact. Each action can be
+        executed independently — start with the highest-priority item.
+      </p>
+
+      <div class="tp-action-list">
+
+        <!-- Action 1: AI-suggested — top priority -->
+        <button class="tp-action-item tp-action-item--primary"
+                onclick="tpAction('Rollback of Deploy #482 initiated. Monitoring error rate...')">
+          <div class="tp-action-item__icon">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="#0f62fe" aria-hidden="true">
+              <path d="M22 8l-2 2 4 4H6v2h18l-4 4 2 2 6-7z"/><path d="M10 24l-2-2 4-4H6v-2h6l4-4 2 2-6 7z" style="opacity:0"/>
+              <path d="M20 4L4 20l2 2 16-16z"/>
+              <path d="M14 12v12h2V14l8 8 2-2L14 7.17V12z" style="opacity:0"/>
+              <path d="M8 4v8l8-8z"/>
+              <path d="M8 4v8l8-8H8zm2 2h4L8 8V6z" style="opacity:0"/>
+              <path d="M12 2H4v8l8-8zm-2 2L4 10V4h6z"/>
+            </svg>
+          </div>
+          <div class="tp-action-item__content">
+            <div class="tp-action-item__title">Rollback Deploy #482</div>
+            <div class="tp-action-item__desc">Revert to payment-svc v2.3.8. Deploy #482 pushed 12 min ago correlates with incident start. Rollback window still open (~3 min remaining).</div>
+          </div>
+          <span class="tp-action-item__badge tp-action-item__badge--ai">AI · High impact</span>
+        </button>
+
+        <!-- Action 2: raise DB pool ceiling -->
+        <button class="tp-action-item tp-action-item--primary"
+                onclick="tpAction('DB connection pool ceiling raised to 400. Monitoring pool utilisation...')">
+          <div class="tp-action-item__icon">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="#0f62fe" aria-hidden="true">
+              <path d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12S22.6 4 16 4zm0 22C10.5 26 6 21.5 6 16S10.5 6 16 6s10 4.5 10 10-4.5 10-10 10z"/>
+              <path d="M17 11h-2v4H11v2h4v4h2v-4h4v-2h-4z"/>
+            </svg>
+          </div>
+          <div class="tp-action-item__content">
+            <div class="tp-action-item__title">Raise DB connection pool ceiling</div>
+            <div class="tp-action-item__desc">Increase max_connections from 200 → 400 in payments-prod. Immediate relief — takes effect without restart. Assign to RJ for infrastructure execution.</div>
+          </div>
+          <span class="tp-action-item__badge tp-action-item__badge--ai">AI · Immediate relief</span>
+        </button>
+
+        <!-- Action 3: Acknowledge -->
+        <button class="tp-action-item"
+                onclick="tpAction('P1 incident acknowledged. On-call team notified.')">
+          <div class="tp-action-item__icon">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="#525252" aria-hidden="true">
+              <path d="M13 24l-9-9 1.41-1.41L13 21.17l14.59-14.58L29 8z"/>
+            </svg>
+          </div>
+          <div class="tp-action-item__content">
+            <div class="tp-action-item__title">Acknowledge P1 incident</div>
+            <div class="tp-action-item__desc">Mark incident as acknowledged. Notifies on-call stakeholders and stops escalation timer (currently running).</div>
+          </div>
+        </button>
+
+        <!-- Action 4: View blast radius -->
+        <button class="tp-action-item"
+                onclick="tpAction('Opening blast radius view in Instana...')">
+          <div class="tp-action-item__icon">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="#525252" aria-hidden="true">
+              <path d="M16 2a14 14 0 1 0 14 14A14 14 0 0 0 16 2zm0 26a12 12 0 1 1 12-12 12 12 0 0 1-12 12z"/>
+              <path d="M16 11a5 5 0 1 0 5 5 5 5 0 0 0-5-5zm0 8a3 3 0 1 1 3-3 3 3 0 0 1-3 3z"/>
+            </svg>
+          </div>
+          <div class="tp-action-item__content">
+            <div class="tp-action-item__title">View blast radius</div>
+            <div class="tp-action-item__desc">3 services · 7 hosts · 2 namespaces affected. Order-svc and cart-svc showing degraded latency downstream.</div>
+          </div>
+        </button>
+
+        <!-- Action 5: Check auto-scale -->
+        <button class="tp-action-item"
+                onclick="tpAction('Opening auto-scale status in Instana...')">
+          <div class="tp-action-item__icon">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="#525252" aria-hidden="true">
+              <path d="M26 24h-4v-4h-2v4h-4v2h4v4h2v-4h4v-2zM4 6h18v2H4zM4 12h14v2H4zM4 18h10v2H4z"/>
+            </svg>
+          </div>
+          <div class="tp-action-item__content">
+            <div class="tp-action-item__title">Check auto-scale status</div>
+            <div class="tp-action-item__desc">+5 replicas currently running. Verify new pods are healthy and not landing on worker-04 (CPU at 96% — scheduler placement risk).</div>
+          </div>
+        </button>
+
+      </div>
+    </div><!-- /tp-pane-actions -->
+
+    <!-- ── Tab 4: Team ─────────────────────────────────────────────── -->
+    <div class="trace-panel__tab-pane"
+         id="tp-pane-team" role="tabpanel" aria-labelledby="tp-tab-team">
+
+      <p class="tp-team-intro">
+        Incident owner: <strong>Carlos S.</strong> (you). Infrastructure actions require
+        coordination with <strong>RJ</strong>, who owns deployment rollback and DB pool configuration.
+      </p>
+
+      <!-- RJ card -->
+      <div class="tp-person-card">
+        <div class="tp-person-card__top">
+          <div class="tp-person-card__avatar tp-person-card__avatar--rj" aria-hidden="true">RJ</div>
+          <div>
+            <div class="tp-person-card__name">RJ</div>
+            <div class="tp-person-card__role">DevOps / Infrastructure</div>
+          </div>
+        </div>
+        <div class="tp-person-card__context">
+          Deploy #482 was pushed 12 min ago and is likely correlated with this P1. RJ owns
+          infrastructure scaling, the DB connection pool configuration, and the rollback
+          playbook for payment-svc. Worker-04 CPU is at 96% — RJ needs to set
+          scheduler taints to avoid placing new replicas there.
+        </div>
+        <div class="tp-person-card__actions">
+          <button class="tp-btn-orange" onclick="pingRJ()">Ping RJ</button>
+          <button class="tp-btn-secondary" onclick="assignToRJ()">Assign to RJ</button>
+        </div>
+      </div>
+
+      <!-- Context: what RJ needs to know -->
+      <p class="tp-section-heading">Handoff context for RJ</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Rollback target</span>
+        <span class="tp-metric-row__val">payment-svc v2.3.8 (pre-#482)</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Rollback window</span>
+        <span class="tp-metric-row__val tp-metric-row__val--warning">~3 min remaining</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">DB pool action</span>
+        <span class="tp-metric-row__val">Raise max_connections 200 → 400</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Worker-04 status</span>
+        <span class="tp-metric-row__val tp-metric-row__val--warning">CPU 96% · taint to block new pods</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Auto-scale pods</span>
+        <span class="tp-metric-row__val">+5 replicas · verify placement</span>
+      </div>
+    </div><!-- /tp-pane-team -->
+
+  </div><!-- /trace-panel__body -->
+
+  <!-- Sticky footer -->
+  <div class="trace-panel__footer">
+    <button class="tp-btn-primary" onclick="tpAction('Opening Payment Service trace in Instana...')">
+      Open in Instana
+      <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 2h-4v2h4v4h2V4a2 2 0 0 0-2-2zM6 4h4V2H6a2 2 0 0 0-2 2v4h2zm20 22h-4v2h4a2 2 0 0 0 2-2v-4h-2zM4 26v-4H2v4a2 2 0 0 0 2 2h4v-2zm11-2H7v-8h2v6h6zm10.6-9.4L22 18.2V14h-2v7h7v-2h-4.2l3.6-3.6z"/></svg>
+    </button>
+    <button class="tp-btn-ghost" onclick="closeTracePanel()">Close</button>
+  </div>
+
+</aside><!-- /trace-panel -->
+
+
+
+<script>
+  // ── Demo scenario state ───────────────────────────────────────────────────
+  var _dashState = 'a';
+
+  function setDashboardState(state) {
+    _dashState = state;
+    document.getElementById('demoToggleBtn').textContent = state === 'a' ? 'SCENARIO A' : 'SCENARIO B';
+
+    // ── AI card ─────────────────────────────────────────────────────────────
+    document.getElementById('state-a').style.display = state === 'a' ? '' : 'none';
+    document.getElementById('state-b').style.display = state === 'b' ? '' : 'none';
+
+    // ── AI summary strip ────────────────────────────────────────────────────
+    var meta = document.getElementById('ai-summary-meta');
+    var text = document.getElementById('ai-summary-text');
+    if (meta && text) {
+      if (state === 'a') {
+        meta.textContent = 'Dashboard as of today · All SLOs healthy · 23 services';
+        text.textContent = '28 of 28 SLOs healthy. Error budgets accumulating. 0 active incidents, 0 on-call pages. MTTD 2.1 min avg this week.';
+      } else {
+        meta.textContent = 'Dashboard as of today · P1 active · error budget critical';
+        text.innerHTML = '<strong style="color:#da1e28">Payment Service error rate 16.8% — 2.5 hrs of error budget left.</strong><br>Deploy #482 is the likely cause. → Rollback or raise DB pool ceiling now.';
+      }
+    }
+
+    // ── KPI cells ───────────────────────────────────────────────────────────
+    var vIncidents = document.getElementById('kpi-incidents-value');
+    var uIncidents = document.getElementById('kpi-incidents-unit');
+    var hIncidents = document.getElementById('kpi-incidents-helper');
+    var vBudget    = document.getElementById('kpi-budget-value');
+    var uBudget    = document.getElementById('kpi-budget-unit');
+    var hBudget    = document.getElementById('kpi-budget-helper');
+    var vErrRate   = document.getElementById('kpi-errorrate-value');
+    var uErrRate   = document.getElementById('kpi-errorrate-unit');
+    var hErrRate   = document.getElementById('kpi-errorrate-helper');
+    var vLatency   = document.getElementById('kpi-latency-value');
+    var uLatency   = document.getElementById('kpi-latency-unit');
+    var hLatency   = document.getElementById('kpi-latency-helper');
+
+    if (state === 'a') {
+      if (vIncidents) { vIncidents.textContent = '0'; vIncidents.style.color = '#198038'; }
+      if (uIncidents) uIncidents.textContent = '';
+      if (hIncidents) hIncidents.textContent = 'No incidents open · all SLOs healthy';
+      if (vBudget)    { vBudget.textContent = '97'; vBudget.style.color = '#198038'; }
+      if (uBudget)    uBudget.textContent = '%';
+      if (hBudget)    hBudget.textContent = 'Accumulating · burn rate 0.4×';
+      if (vErrRate)   { vErrRate.textContent = '0.4'; vErrRate.style.color = '#198038'; }
+      if (uErrRate)   uErrRate.textContent = '%';
+      if (hErrRate)   hErrRate.textContent = 'Baseline · all services normal';
+      if (vLatency)   { vLatency.textContent = '210'; vLatency.style.color = '#198038'; }
+      if (uLatency)   uLatency.textContent = 'ms';
+      if (hLatency)   hLatency.textContent = 'Well within 2,000ms SLO threshold';
+    } else {
+      if (vIncidents) { vIncidents.textContent = '1'; vIncidents.style.color = '#da1e28'; }
+      if (uIncidents) uIncidents.textContent = 'P1';
+      if (hIncidents) hIncidents.textContent = 'P1 · payment-service · 8 min active';
+      if (vBudget)    { vBudget.textContent = '2.5'; vBudget.style.color = '#da1e28'; }
+      if (uBudget)    uBudget.textContent = 'h left';
+      if (hBudget)    hBudget.textContent = 'Burn rate 14.4× · budget depletes in 2.5h';
+      if (vErrRate)   { vErrRate.textContent = '16.8'; vErrRate.style.color = '#da1e28'; }
+      if (uErrRate)   uErrRate.textContent = '%';
+      if (hErrRate)   hErrRate.textContent = '42× above baseline · HTTP 504 on /charge';
+      if (vLatency)   { vLatency.textContent = '8,400'; vLatency.style.color = '#da1e28'; }
+      if (uLatency)   uLatency.textContent = 'ms';
+      if (hLatency)   hLatency.textContent = '4.2× over SLO threshold · 2,000ms limit';
+    }
+
+    // ── Bottom row tiles ─────────────────────────────────────────────────────
+    var mttrSub     = document.getElementById('tile-mttr-sub');
+    var sloHealthy  = document.getElementById('tile-slo-healthy');
+    var sloAtRisk   = document.getElementById('tile-slo-atrisk');
+    var sloSub      = document.getElementById('tile-slo-sub');
+    var budgetPct   = document.getElementById('tile-budget-pct');
+    var budgetFill  = document.getElementById('tile-budget-fill');
+    var budgetTrack = document.getElementById('tile-budget-track');
+    var budgetLabel = document.getElementById('tile-budget-label');
+    var budgetTag   = document.getElementById('tile-budget-tag');
+    var budgetSvcs  = document.getElementById('tile-budget-services');
+    var budgetBurn  = document.getElementById('tile-budget-burnrate');
+    var budgetBurnL = document.getElementById('tile-budget-burnlabel');
+
+    if (state === 'a') {
+      if (mttrSub)     mttrSub.textContent     = '↓ 22% vs last period';
+      if (sloHealthy)  sloHealthy.textContent  = '96';
+      if (sloAtRisk)   sloAtRisk.textContent   = '4';
+      if (sloSub)      sloSub.textContent      = '28 total SLOs monitored. 0 breached.';
+      if (budgetPct)   budgetPct.innerHTML     = '73<sup>%</sup>';
+      if (budgetFill)  { budgetFill.style.width = '27%'; budgetFill.style.background = '#0f62fe'; }
+      if (budgetTrack) { budgetTrack.setAttribute('aria-valuenow','73'); budgetTrack.setAttribute('aria-label','73% of error budget remaining'); }
+      if (budgetLabel) budgetLabel.textContent = 'of error budget remaining this period';
+      if (budgetTag)   { budgetTag.textContent = 'burn-rate active'; budgetTag.className = 'tag--sre'; }
+      if (budgetSvcs)  budgetSvcs.innerHTML   = '3<sub></sub>';
+      if (budgetBurn)  budgetBurn.innerHTML   = '3.2<sub>×</sub>';
+      if (budgetBurnL) budgetBurnL.textContent = 'payment-svc';
+    } else {
+      if (mttrSub)     mttrSub.textContent     = '8 min elapsed on active P1 · resolution in progress';
+      if (sloHealthy)  sloHealthy.textContent  = '21';
+      if (sloAtRisk)   sloAtRisk.textContent   = '79';
+      if (sloSub)      sloSub.textContent      = '28 total SLOs. Payment-service SLO breached — burn rate 14.4×.';
+      if (budgetPct)   budgetPct.innerHTML     = '<2.5<sup>h</sup>';
+      if (budgetFill)  { budgetFill.style.width = '98%'; budgetFill.style.background = '#da1e28'; }
+      if (budgetTrack) { budgetTrack.setAttribute('aria-valuenow','98'); budgetTrack.setAttribute('aria-label','Error budget critically depleted'); }
+      if (budgetLabel) budgetLabel.textContent = 'of error budget remaining — critically low';
+      if (budgetTag)   { budgetTag.textContent = 'P1 active'; budgetTag.className = 'tag--red'; }
+      if (budgetSvcs)  budgetSvcs.innerHTML   = '1<sub></sub>';
+      if (budgetBurn)  budgetBurn.innerHTML   = '14.4<sub>×</sub>';
+      if (budgetBurnL) budgetBurnL.textContent = 'payment-svc · P1';
+    }
+
+    // ── Chat welcome sub-text ────────────────────────────────────────────────
+    var welcomeSub = document.getElementById('chat-welcome-sub');
+    if (welcomeSub) {
+      welcomeSub.textContent = state === 'a'
+        ? 'Ask AI about your SRE metrics, SLOs, alerts, and infrastructure health'
+        : 'P1 active — ask AI about root cause, rollback, error budget, or traces';
+    }
+
+    // ── Chat suggestions ─────────────────────────────────────────────────────
+    var sugg = document.getElementById('chatSuggestions');
+    if (sugg && sugg.style.display !== 'none') {
+      var btns = sugg.querySelectorAll('.chat-suggestion');
+      var suggestionsA = [
+        'Show me the SLO burn rate for payment service',
+        'Any post-deploy anomalies from #482?',
+        'Which services are at early warning?',
+        'What was auto-resolved today?'
+      ];
+      var suggestionsB = [
+        "What's the root cause of the P1?",
+        'Do I need to roll back deploy #482?',
+        'How much error budget do I have left?',
+        'What does the trace show for /charge?'
+      ];
+      var list = state === 'a' ? suggestionsA : suggestionsB;
+      btns.forEach(function(btn, i) {
+        if (list[i]) btn.textContent = list[i];
+      });
+    }
+  }
+
+  // ── Persona menu ──────────────────────────────────────────────────────────
+  (function() {
+    var current = 'carlos';
+    localStorage.setItem('instana-persona', current);
+    var items = document.querySelectorAll('.persona-dropdown__item');
+    items.forEach(function(el) {
+      if (el.dataset.persona === current) el.classList.add('persona-dropdown__item--active');
+    });
+  })();
+
+  function togglePersonaMenu(e) {
+    e.stopPropagation();
+    var btn  = document.getElementById('personaBtn');
+    var menu = document.getElementById('personaMenu');
+    var open = menu.getAttribute('aria-hidden') === 'false';
+    menu.setAttribute('aria-hidden', open ? 'true' : 'false');
+    btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+  }
+
+  document.addEventListener('click', function() {
+    var menu = document.getElementById('personaMenu');
+    if (menu) {
+      menu.setAttribute('aria-hidden', 'true');
+      document.getElementById('personaBtn').setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var menu = document.getElementById('personaMenu');
+      if (menu) {
+        menu.setAttribute('aria-hidden', 'true');
+        document.getElementById('personaBtn').setAttribute('aria-expanded', 'false');
+        document.getElementById('personaBtn').focus();
+      }
+      if (document.body.classList.contains('chat-open')) toggleChat();
+    }
+  });
+
+  // ── AI Chat panel ─────────────────────────────────────────────────────────
+  function restartChat() {
+    var log  = document.getElementById('chatMessages');
+    var sugg = document.getElementById('chatSuggestions');
+    var msgs = log.querySelectorAll('.chat-msg, .chat-typing');
+    msgs.forEach(function(el) { el.remove(); });
+    if (sugg) sugg.style.display = '';
+    setDashboardState(_dashState);
+  }
+
+  function toggleChat() {
+    var open   = document.body.classList.toggle('chat-open');
+    var panel  = document.getElementById('chatPanel');
+    var toggle = document.getElementById('aiChatToggle');
+    panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.classList.toggle('view-btn--ai--active', open);
+    if (open) {
+      setTimeout(function() {
+        document.getElementById('chatInput').focus();
+      }, 320);
+    }
+  }
+
+  var AI_RESPONSES = {
+    'slo':      'Current SLO compliance: **Availability** 99.94% (target 99.9% ✓), **Latency p99** 187ms (target 200ms ✓), **Error rate** 0.08% (target 0.1% ✓). All three SLOs are within budget. Error budget remaining: 68%.',
+    'alert':    'There are **4 active alerts**: (1) High CPU on worker-node-12 — 89% utilisation, triggered 14 min ago; (2) Elevated error rate on notifications-service — 0.4%, since 09:22; (3) Pod restart loop on batch-processor — 3 restarts in 1h; (4) Disk pressure on persistent-volume-07 — 91% full.',
+    'degraded': 'Two services are currently degraded: **notifications-service** (elevated 5xx, p99 latency 340ms vs 150ms baseline) and **batch-processor** (pod restart loop causing intermittent failures). All payment-critical services are healthy.',
+    'incident': 'In the last 24h there were **2 incidents**: (1) Network partition affecting worker-node-07 at 02:14–03:48 — resolved, post-mortem scheduled; (2) Database connection pool exhaustion on orders-db at 11:30 — resolved via connection limit increase.',
+    'p1':       '**Root cause — payment-service P1:** Deploy #482 (18:43 UTC) introduced a DB connection pool misconfiguration. Pool ceiling dropped from 200 → 20 connections. Under checkout load, pool exhausts in ~40 s causing HTTP 504 on **/charge**. Error rate spiked to **16.8%** within 3 minutes of deploy. Fix: roll back #482 or patch `db.maxConnections=200` and redeploy.',
+    'rollback': '**Roll back deploy #482?** Yes — recommended immediately. Rollback to #481 will restore `db.maxConnections=200`. Estimated recovery time: **~4 min** (pod restart + warm-up). Steps: `kubectl rollout undo deployment/payment-service` then verify pod readiness. Error budget burn will halt once pool normalises.',
+    'budget':   '**Error budget remaining:** <2.5 hours at current burn rate of **14.4×**. This period started with 30 days of budget. Payment-service has consumed **97.5%** in the last 8 minutes. If not resolved within 2.5 h, the SLO breach will be recorded and the error budget resets at zero for this window.',
+    'trace':    '**Trace analysis — /charge (HTTP 504):** Span breakdown — API gateway 2 ms → payment-service 8,350 ms (bottleneck) → DB acquire timeout after 8,000 ms. **Root span** shows `connection pool wait` exceeding timeout threshold. No downstream service (fraud-check, ledger-svc) is contributing to the latency — the bottleneck is entirely within payment-service DB pool acquisition.',
+    'default':  'I\'m reviewing your SRE dashboard data. All payment-critical SLOs are currently within budget. Would you like me to analyse a specific service, alert, or time window?'
+  };
+
+  function getAIResponse(text) {
+    var t = text.toLowerCase();
+    if (t.includes('p1') || t.includes('root cause') || t.includes('what') && t.includes('cause'))      return AI_RESPONSES['p1'];
+    if (t.includes('rollback') || t.includes('roll back') || t.includes('deploy') || t.includes('482')) return AI_RESPONSES['rollback'];
+    if (t.includes('budget') || t.includes('remaining') || t.includes('how much'))                      return AI_RESPONSES['budget'];
+    if (t.includes('trace') || t.includes('/charge') || t.includes('504') || t.includes('checkout'))    return AI_RESPONSES['trace'];
+    if (t.includes('slo') || t.includes('compliance'))                                                   return AI_RESPONSES['slo'];
+    if (t.includes('alert') || t.includes('firing'))                                                     return AI_RESPONSES['alert'];
+    if (t.includes('degrad') || t.includes('service') || t.includes('health'))                          return AI_RESPONSES['degraded'];
+    if (t.includes('incident') || t.includes('summary') || t.includes('24h'))                           return AI_RESPONSES['incident'];
+    return AI_RESPONSES['default'];
+  }
+
+  var WX_AVATAR_SVG =
+    '<svg class="chat-msg__ai-avatar" viewBox="0 0 32 32" fill="none" aria-hidden="true">' +
+      '<circle cx="16" cy="16" r="15" stroke="#a56eff" stroke-width="1.5" fill="none"/>' +
+      '<ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none"/>' +
+      '<ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none" transform="rotate(60 16 16)"/>' +
+      '<ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none" transform="rotate(120 16 16)"/>' +
+      '<circle cx="16" cy="16" r="2.5" fill="#4589ff"/>' +
+      '<circle cx="16" cy="1" r="2" fill="#a56eff"/>' +
+      '<circle cx="28.99" cy="8.5" r="2" fill="#4589ff"/>' +
+      '<circle cx="3.01" cy="8.5" r="2" fill="#4589ff"/>' +
+    '</svg>';
+
+  var FEEDBACK_HTML =
+    '<div class="chat-msg__feedback">' +
+      '<button class="chat-feedback-btn" aria-label="Thumbs up"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M26 31H6a2 2 0 0 1-2-2V17a2 2 0 0 1 2-2h4V5a3 3 0 0 1 6 0v6h6.22A3 3 0 0 1 25 13.92L27.93 23A3 3 0 0 1 26 31zM6 17v12h20a1 1 0 0 0 .95-1.32L24 18.68A1 1 0 0 0 23.22 18H14V5a1 1 0 0 0-2 0v12H6z"/></svg></button>' +
+      '<button class="chat-feedback-btn" aria-label="Thumbs down"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M6 1h20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4v10a3 3 0 0 1-6 0V21H9.78A3 3 0 0 1 7 18.08L4.07 9A3 3 0 0 1 6 1zm20 14V3H6a1 1 0 0 0-.95 1.32L8 13.32A1 1 0 0 0 8.78 14H18v10a1 1 0 0 0 2 0V14h6z"/></svg></button>' +
+      '<button class="chat-feedback-btn" aria-label="Copy"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M28 10v18H10V10h18m0-2H10a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2z"/><path d="M4 18H2V4a2 2 0 0 1 2-2h14v2H4z"/></svg></button>' +
+      '<button class="chat-feedback-btn" aria-label="Regenerate"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M12 10H6.78A11 11 0 0 1 27 16a1 1 0 0 0 2 0A13 13 0 0 0 6 6.16V2l-6 5 6 5V8h6zM20 22h-5.23A11 11 0 0 1 5 16a1 1 0 0 0-2 0A13 13 0 0 0 26 25.84V30l6-5-6-5z"/></svg></button>' +
+    '</div>';
+
+  function getNow() {
+    var d = new Date();
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  }
+
+  function addMessage(role, text) {
+    var log  = document.getElementById('chatMessages');
+    var div  = document.createElement('div');
+    div.className = 'chat-msg chat-msg--' + role;
+    var now = getNow();
+    if (role === 'ai') {
+      div.innerHTML =
+        '<div class="chat-msg__meta-row">' + WX_AVATAR_SVG + '<span class="chat-msg__sender">watsonx ' + now + '</span></div>' +
+        '<div class="chat-msg__bubble-row"><div class="chat-msg__bubble">' +
+          text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') +
+        '</div></div>' +
+        FEEDBACK_HTML;
+    } else {
+      div.innerHTML =
+        '<div class="chat-msg__meta-row"><span class="chat-msg__sender">You ' + now + '</span></div>' +
+        '<div class="chat-msg__bubble-row"><div class="chat-msg__bubble">' +
+          text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') +
+        '</div></div>';
+    }
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+    return div;
+  }
+
+  function addTypingIndicator() {
+    var log = document.getElementById('chatMessages');
+    var div = document.createElement('div');
+    div.className = 'chat-typing';
+    div.id = 'typingIndicator';
+    div.innerHTML =
+      WX_AVATAR_SVG.replace('class="chat-msg__ai-avatar"', 'class="chat-typing__avatar"') +
+      '<div class="chat-typing__dots"><span class="chat-typing__dot"></span><span class="chat-typing__dot"></span><span class="chat-typing__dot"></span></div>';
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function sendChatMessage() {
+    var input = document.getElementById('chatInput');
+    var text  = input.value.trim();
+    if (!text) return;
+    var sugg = document.getElementById('chatSuggestions');
+    if (sugg) sugg.style.display = 'none';
+    addMessage('user', text);
+    input.value = '';
+    autoResizeTextarea(input);
+    addTypingIndicator();
+    setTimeout(function() {
+      var indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+      addMessage('ai', getAIResponse(text));
+    }, 1200 + Math.random() * 600);
+  }
+
+  function sendSuggestion(btn) {
+    var widgetId = btn.dataset.widget;
+    if (widgetId) {
+      addWidgetChart(widgetId, btn.textContent.trim());
+      return;
+    }
+    var text = btn.textContent.trim();
+    document.getElementById('chatInput').value = text;
+    sendChatMessage();
+  }
+
+  function addWidgetChart(widgetId, label) {
+    var sugg = document.getElementById('chatSuggestions');
+    if (sugg) sugg.style.display = 'none';
+
+    addMessage('user', label);
+    addTypingIndicator();
+
+    setTimeout(function() {
+      var indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+
+      var log = document.getElementById('chatMessages');
+      var div = document.createElement('div');
+      div.className = 'chat-msg chat-msg--ai';
+
+      var bubble = document.createElement('div');
+      bubble.className = 'chat-msg__bubble chat-msg__bubble--chart';
+
+      if (widgetId === 'p99-latency-chart') {
+        // Multi-line P99 latency, 6h window (13 data points, 30-min intervals)
+        // X: 32–315, Y: 10–110 (plot area height 100px). SLO = 200ms → y = 110 - (200/500)*100 = 70
+        // payment-svc: spikes above SLO briefly at T=4 (430ms) and T=5 (380ms)
+        // notifications-svc: stable ~90ms
+        // checkout-svc: elevated, hits 250ms at T=6
+        // Scale: 100px = 500ms → 1ms = 0.2px
+        var times = ['12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00'];
+        var xStep = (315 - 32) / 12; // ~23.6px per interval
+        function toY(ms) { return 110 - (Math.min(ms, 500) / 500) * 100; }
+        var payData = [95, 102, 140, 188, 430, 380, 210, 160, 130, 105, 98, 96, 94];
+        var notifData = [88, 90, 92, 89, 91, 93, 90, 88, 90, 92, 89, 90, 91];
+        var checkData = [115, 120, 135, 160, 195, 250, 230, 175, 140, 125, 118, 116, 114];
+        var payPts = '', notifPts = '', checkPts = '';
+        for (var i = 0; i < 13; i++) {
+          var x = 32 + i * xStep;
+          payPts   += x.toFixed(1) + ',' + toY(payData[i]).toFixed(1)   + ' ';
+          notifPts += x.toFixed(1) + ',' + toY(notifData[i]).toFixed(1) + ' ';
+          checkPts += x.toFixed(1) + ',' + toY(checkData[i]).toFixed(1) + ' ';
+        }
+        var sloY = toY(200).toFixed(1);
+        var xLabels = '';
+        [0, 3, 6, 9, 12].forEach(function(i) {
+          xLabels += '<text x="' + (32 + i * xStep).toFixed(1) + '" y="122" text-anchor="middle" font-size="9" fill="#6f6f6f">' + times[i] + '</text>';
+        });
+        bubble.innerHTML =
+          '<p style="margin:0 0 8px;font-size:12px;color:#525252;">P99 latency (ms) · 6h · top 3 services</p>' +
+          '<svg viewBox="0 0 320 132" width="100%" style="display:block;overflow:visible" aria-label="P99 latency chart for 3 services">' +
+            '<line x1="32" y1="10"  x2="315" y2="10"  stroke="#e0e0e0" stroke-width="0.5"/>' +
+            '<line x1="32" y1="35"  x2="315" y2="35"  stroke="#e0e0e0" stroke-width="0.5"/>' +
+            '<line x1="32" y1="60"  x2="315" y2="60"  stroke="#e0e0e0" stroke-width="0.5"/>' +
+            '<line x1="32" y1="85"  x2="315" y2="85"  stroke="#e0e0e0" stroke-width="0.5"/>' +
+            '<line x1="32" y1="110" x2="315" y2="110" stroke="#e0e0e0" stroke-width="0.5"/>' +
+            '<text x="28" y="13"  text-anchor="end" font-size="9" fill="#6f6f6f">500</text>' +
+            '<text x="28" y="38"  text-anchor="end" font-size="9" fill="#6f6f6f">375</text>' +
+            '<text x="28" y="63"  text-anchor="end" font-size="9" fill="#6f6f6f">250</text>' +
+            '<text x="28" y="88"  text-anchor="end" font-size="9" fill="#6f6f6f">125</text>' +
+            '<text x="28" y="113" text-anchor="end" font-size="9" fill="#6f6f6f">0</text>' +
+            // SLO threshold dashed line
+            '<line x1="32" y1="' + sloY + '" x2="315" y2="' + sloY + '" stroke="#f1c21b" stroke-width="1.5" stroke-dasharray="5,3"/>' +
+            '<text x="317" y="' + (parseFloat(sloY) + 3).toFixed(1) + '" font-size="8" fill="#f1c21b">SLO 200ms</text>' +
+            // payment-svc (blue)
+            '<polyline fill="none" stroke="#4589ff" stroke-width="1.5" stroke-linejoin="round" points="' + payPts + '"/>' +
+            // notifications-svc (teal)
+            '<polyline fill="none" stroke="#009d9a" stroke-width="1.5" stroke-linejoin="round" points="' + notifPts + '"/>' +
+            // checkout-svc (purple)
+            '<polyline fill="none" stroke="#a56eff" stroke-width="1.5" stroke-linejoin="round" points="' + checkPts + '"/>' +
+            xLabels +
+            '<circle cx="36" cy="132" r="3" fill="#4589ff"/><text x="42" y="135" font-size="9" fill="#393939">payment-svc</text>' +
+            '<circle cx="110" cy="132" r="3" fill="#009d9a"/><text x="116" y="135" font-size="9" fill="#393939">notifications-svc</text>' +
+            '<circle cx="198" cy="132" r="3" fill="#a56eff"/><text x="204" y="135" font-size="9" fill="#393939">checkout-svc</text>' +
+          '</svg>' +
+          '<p style="margin:10px 0 0;font-size:12px;color:#525252;">**payment-svc breached the 200ms SLO** at 14:00–14:30 (peak 430ms). checkout-svc is approaching threshold. Notifications-svc remains well within budget. Error budget consumed: 12% this window.</p>';
+      }
+
+      bubble.innerHTML = bubble.innerHTML.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      div.appendChild(bubble);
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+      if (widgetId === 'p99-latency-chart') { replaceMttrTile(); }
+    }, 1400 + Math.random() * 400);
+  }
+
+  function replaceMttrTile() {
+    var target = document.getElementById('tile-mttr');
+    if (!target) return;
+    var tile = document.createElement('div');
+    tile.className = 'p99-latency-tile tile-animate-in';
+    // Plot area: x 38–268, y 10–110 (100px = 500ms range)
+    var plotX0 = 38, plotX1 = 268, plotY0 = 10, plotY1 = 110;
+    var xStep = (plotX1 - plotX0) / 12;
+    function toY(ms) { return plotY1 - (Math.min(ms, 500) / 500) * (plotY1 - plotY0); }
+    var times    = ['12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00'];
+    var payData  = [95, 102, 140, 188, 430, 380, 210, 160, 130, 105, 98, 96, 94];
+    var checkData = [115, 120, 135, 160, 195, 250, 230, 175, 140, 125, 118, 116, 114];
+    var payPts = '', checkPts = '';
+    for (var i = 0; i < 13; i++) {
+      var x = plotX0 + i * xStep;
+      payPts   += x.toFixed(1) + ',' + toY(payData[i]).toFixed(1)   + ' ';
+      checkPts += x.toFixed(1) + ',' + toY(checkData[i]).toFixed(1) + ' ';
+    }
+    var sloY = toY(200).toFixed(1);
+    // Y gridlines + labels: 500, 375, 250, 125, 0 ms
+    var yGrid = [
+      { ms: 500, label: '500' },
+      { ms: 375, label: '375' },
+      { ms: 250, label: '250' },
+      { ms: 125, label: '125' },
+      { ms: 0,   label: '0'   }
+    ];
+    var gridLines = '';
+    for (var k = 0; k < yGrid.length; k++) {
+      var gy = toY(yGrid[k].ms).toFixed(1);
+      gridLines +=
+        '<line x1="' + plotX0 + '" y1="' + gy + '" x2="' + plotX1 + '" y2="' + gy + '" stroke="#e0e0e0" stroke-width="0.5"/>' +
+        '<text x="' + (plotX0 - 3) + '" y="' + (parseFloat(gy) + 3).toFixed(1) + '" text-anchor="end" font-size="8" fill="#6f6f6f">' + yGrid[k].label + '</text>';
+    }
+    // X labels: every 3rd point — 12:00, 13:30, 15:00, 16:30, 18:00
+    var xLabels = '';
+    [0, 3, 6, 9, 12].forEach(function(i) {
+      xLabels += '<text x="' + (plotX0 + i * xStep).toFixed(1) + '" y="125" text-anchor="middle" font-size="8" fill="#6f6f6f">' + times[i] + '</text>';
+    });
+    // Legend
+    var legend =
+      '<circle cx="' + plotX0 + '" cy="136" r="3" fill="#0043ce"/>' +
+      '<text x="' + (plotX0 + 6) + '" y="139" font-size="8" fill="#525252">payment-svc</text>' +
+      '<circle cx="130" cy="136" r="3" fill="#8a3ffc"/>' +
+      '<text x="136" y="139" font-size="8" fill="#525252">checkout-svc</text>';
+    tile.innerHTML =
+      '<div class="p99-latency-tile__ai-badge">AI</div>' +
+      '<div class="p99-latency-tile__header">P99 Latency · 6h (ms)</div>' +
+      '<svg viewBox="0 0 280 144" width="100%" aria-label="P99 latency sparkline">' +
+        gridLines +
+        '<line x1="' + plotX0 + '" y1="' + sloY + '" x2="' + plotX1 + '" y2="' + sloY + '" stroke="#f1c21b" stroke-width="1.5" stroke-dasharray="4,3"/>' +
+        '<text x="' + (plotX1 + 2) + '" y="' + (parseFloat(sloY) + 3).toFixed(1) + '" font-size="7" fill="#a2791c">SLO</text>' +
+        '<polyline fill="none" stroke="#0043ce" stroke-width="1.5" stroke-linejoin="round" points="' + payPts + '"/>' +
+        '<polyline fill="none" stroke="#8a3ffc" stroke-width="1.5" stroke-linejoin="round" points="' + checkPts + '"/>' +
+        xLabels +
+        legend +
+      '</svg>' +
+      '<div style="font-size:10px;color:#da1e28;margin-top:4px;">⚠ payment-svc breached SLO at 14:00</div>';
+    target.parentNode.replaceChild(tile, target);
+  }
+
+  function handleChatKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChatMessage();
+    }
+  }
+
+  function autoResizeTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  // ── Trace Panel ───────────────────────────────────────────────────────────
+
+  /**
+   * openPanel(type) — data-attribute dispatcher.
+   * Add data-panel="<type>" to any CTA button to open the panel.
+   * Currently only 'openTrace' is populated; other types are stubs for future work.
+   */
+  function openPanel(type) {
+    if (type === 'openTrace') {
+      openTracePanel();
+    }
+    // Future: 'blastRadius', 'sloBreached', 'deployP1', etc.
+  }
+
+  function openTracePanel() {
+    // Reset to first tab whenever panel opens
+    switchTraceTab('summary');
+    document.body.classList.add('trace-panel-open');
+    var panel = document.getElementById('tracePanel');
+    panel.setAttribute('aria-hidden', 'false');
+    // Close chat panel if open (they shouldn't overlap)
+    if (document.body.classList.contains('chat-open')) toggleChat();
+  }
+
+  function closeTracePanel() {
+    document.body.classList.remove('trace-panel-open');
+    var panel = document.getElementById('tracePanel');
+    panel.setAttribute('aria-hidden', 'true');
+  }
+
+  function switchTraceTab(tabId) {
+    // Update tab buttons
+    var buttons = document.querySelectorAll('.trace-panel__tab-btn');
+    buttons.forEach(function(btn) {
+      var active = btn.id === ('tp-tab-' + tabId);
+      btn.classList.toggle('trace-panel__tab-btn--active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    // Update tab panes
+    var panes = document.querySelectorAll('.trace-panel__tab-pane');
+    panes.forEach(function(pane) {
+      pane.classList.toggle('trace-panel__tab-pane--active', pane.id === ('tp-pane-' + tabId));
+    });
+  }
+
+  // Reusable toast for action feedback
+  function showToast(message) {
+    // Remove existing toast if any
+    var existing = document.getElementById('tp-toast');
+    if (existing) existing.remove();
+
+    var toast = document.createElement('div');
+    toast.id = 'tp-toast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.style.cssText = [
+      'position:fixed',
+      'bottom:80px',
+      'right:24px',
+      'z-index:9500',
+      'background:#161616',
+      'color:#f4f4f4',
+      'font-family:IBM Plex Sans,sans-serif',
+      'font-size:13px',
+      'padding:10px 16px',
+      'max-width:340px',
+      'box-shadow:0 4px 12px rgba(0,0,0,0.3)',
+      'opacity:0',
+      'transform:translateY(8px)',
+      'transition:opacity 180ms,transform 180ms'
+    ].join(';');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    // Animate in
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+      });
+    });
+
+    // Auto-dismiss after 3.5s
+    setTimeout(function() {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(8px)';
+      setTimeout(function() { if (toast.parentNode) toast.remove(); }, 200);
+    }, 3500);
+  }
+
+  // Action button handler — shows toast with contextual message
+  function tpAction(message) {
+    showToast(message);
+  }
+
+  // Team tab handlers
+  function pingRJ() {
+    showToast('Ping sent to RJ via Slack');
+  }
+
+  function assignToRJ() {
+    showToast('Incident assigned to RJ');
+  }
+
+  // Keyboard: Escape closes trace panel or export panel
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      if (document.body.classList.contains('trace-panel-open')) closeTracePanel();
+      if (document.body.classList.contains('export-open')) closeExportPanel();
+    }
+  });
+
+  // ── Export panel ──────────────────────────────────────────────────────────
+  var _exportOpenerBtn = null;
+
+  function toggleExportPanel() {
+    document.body.classList.contains('export-open') ? closeExportPanel() : openExportPanel();
+  }
+
+  function openExportPanel() {
+    if (document.body.classList.contains('trace-panel-open')) closeTracePanel();
+    if (document.body.classList.contains('chat-open')) toggleChat();
+    _exportOpenerBtn = document.querySelector('[aria-controls="exportPanel"]');
+    document.body.classList.add('export-open');
+    var panel = document.getElementById('exportPanel');
+    panel.setAttribute('aria-hidden', 'false');
+    setTimeout(function() {
+      var close = document.getElementById('exportPanelClose');
+      if (close) close.focus();
+    }, 230);
+  }
+
+  function closeExportPanel() {
+    document.body.classList.remove('export-open');
+    var panel = document.getElementById('exportPanel');
+    panel.setAttribute('aria-hidden', 'true');
+    if (_exportOpenerBtn) { _exportOpenerBtn.focus(); _exportOpenerBtn = null; }
+  }
+
+  function switchExportTab(id) {
+    document.querySelectorAll('.export-tab').forEach(function(btn) {
+      var active = btn.id === ('exportTab-' + id);
+      btn.classList.toggle('export-tab--active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('.export-tab-body').forEach(function(pane) {
+      pane.classList.toggle('export-tab-body--visible', pane.id === ('exportBody-' + id));
+    });
+    var confirmBtn = document.getElementById('exportConfirmBtn');
+    if (confirmBtn) confirmBtn.textContent = (id === 'schedule') ? 'Save schedule' : (id === 'alerts') ? 'Save alert rules' : 'Send now';
+  }
+
+  function exportToggleCheck(label) {
+    var cb = label.querySelector('.export-cb');
+    cb.classList.toggle('export-cb--checked');
+  }
+
+  function exportSelectFormat(btn) {
+    btn.closest('.export-format-row').querySelectorAll('.export-format-btn').forEach(function(b) {
+      b.classList.remove('export-format-btn--active');
+    });
+    btn.classList.add('export-format-btn--active');
+  }
+
+  function exportSelectDest(btn) {
+    btn.closest('.export-dest-row').querySelectorAll('.export-dest-btn').forEach(function(b) {
+      b.classList.remove('export-dest-btn--active');
+    });
+    btn.classList.add('export-dest-btn--active');
+  }
+
+  function exportSelectDestAlert(btn) {
+    btn.classList.toggle('export-dest-btn--active');
+  }
+
+  function exportToggleChip(btn) {
+    btn.classList.toggle('export-alert-chip--active');
+  }
+
+  function exportToggleSwitch(row) {
+    var track = row.querySelector('.export-toggle-track');
+    track.classList.toggle('export-toggle-track--on');
+  }
+
+  function exportConfirm() {
+    var activeTab = document.querySelector('.export-tab--active');
+    var tabId = activeTab ? activeTab.id.replace('exportTab-', '') : 'once';
+    var titles = { once: 'Report sent', schedule: 'Schedule saved', alerts: 'Alert rules saved' };
+    var bodies = {
+      once: 'Delivered to your Slack channel and email',
+      schedule: 'Your scheduled summary is now active',
+      alerts: 'You\'ll be notified when conditions are met'
+    };
+    closeExportPanel();
+    exportShowToast(titles[tabId] || 'Done', bodies[tabId] || '');
+  }
+
+  function exportShowToast(title, body) {
+    var toast = document.getElementById('exportToast');
+    document.getElementById('exportToastTitle').textContent = title;
+    document.getElementById('exportToastBody').textContent = body;
+    toast.classList.add('export-toast--visible');
+    setTimeout(function() { toast.classList.remove('export-toast--visible'); }, 3500);
+  }
+
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     EXPORT & NOTIFICATIONS PANEL — Carlos (SRE)
+═══════════════════════════════════════════════════════════════════ -->
+<aside class="export-panel" id="exportPanel"
+  role="complementary" aria-label="Export and notifications" aria-hidden="true">
+
+  <!-- Header -->
+  <div class="export-panel__header">
+    <div class="export-panel__header-top">
+      <div class="export-panel__title-block">
+        <div class="export-panel__title">Export &amp; Notifications</div>
+        <div class="export-panel__subtitle">Send this SRE dashboard as a summary report</div>
+      </div>
+      <button class="export-panel__close" id="exportPanelClose"
+        aria-label="Close export panel" onclick="closeExportPanel()">
+        <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4l6.6 6.6L8 22.6 9.4 24l6.6-6.6 6.6 6.6 1.4-1.4-6.6-6.6z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="export-tabs" role="tablist">
+    <button class="export-tab export-tab--active" role="tab"
+      id="exportTab-once" aria-selected="true" aria-controls="exportBody-once"
+      onclick="switchExportTab('once')">
+      <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 24v4H6v-4H4v4a2 2 0 002 2h20a2 2 0 002-2v-4zm0-10l-1.41-1.41L17 20.17V2h-2v18.17l-7.59-7.58L6 14l10 10 10-10z"/></svg>
+      Export once
+    </button>
+    <button class="export-tab" role="tab"
+      id="exportTab-schedule" aria-selected="false" aria-controls="exportBody-schedule"
+      onclick="switchExportTab('schedule')">
+      <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 6h-4V2h-2v4h-8V2h-2v4H6a2 2 0 00-2 2v18a2 2 0 002 2h20a2 2 0 002-2V8a2 2 0 00-2-2zm0 20H6V12h20zm0-12H6V8h4v2h2V8h8v2h2V8h4z"/></svg>
+      Scheduled
+    </button>
+    <button class="export-tab" role="tab"
+      id="exportTab-alerts" aria-selected="false" aria-controls="exportBody-alerts"
+      onclick="switchExportTab('alerts')">
+      <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M28.7 19.3L26 16.6V13a10 10 0 00-9-9.9V1h-2v2.1A10 10 0 006 13v3.6l-2.7 2.7A1 1 0 004 21h7a5 5 0 0010 0h7a1 1 0 00.7-1.7zM16 24a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
+      Critical alerts
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="export-panel__body">
+
+    <!-- ══════════ TAB 1: EXPORT ONCE ══════════ -->
+    <div class="export-tab-body export-tab-body--visible" id="exportBody-once" role="tabpanel" aria-labelledby="exportTab-once">
+
+      <div class="export-section-label">What to include</div>
+      <div class="export-content-list">
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb export-cb--checked"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">SRE summary</div><div class="export-content-item__sub">MTTR, error rate, SLO budget status</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb export-cb--checked"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">Incident breakdown</div><div class="export-content-item__sub">P1/P2 counts, open vs resolved, MTTR trend</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb export-cb--checked"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">Error rate &amp; latency</div><div class="export-content-item__sub">P95/P99 latency, top error services</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">SLO burn rate detail</div><div class="export-content-item__sub">Budget consumed, at-risk services, projections</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">Trace &amp; dependency map</div><div class="export-content-item__sub">Service graph, upstream/downstream impact</div></div>
+        </label>
+      </div>
+
+      <div class="export-section-label">Format</div>
+      <div class="export-format-row">
+        <button class="export-format-btn export-format-btn--active" onclick="exportSelectFormat(this)">
+          <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M30 11H22V9l-6-6H4a2 2 0 00-2 2v26a2 2 0 002 2h20a2 2 0 002-2v-2h4a2 2 0 002-2V13a2 2 0 00-2-2zM22 3.4L26.6 8H22zM24 29H4V5h16v5a2 2 0 002 2h2v1H12a2 2 0 00-2 2v10a2 2 0 002 2h12zm6-4H12V15h18z"/></svg> PDF
+        </button>
+        <button class="export-format-btn" onclick="exportSelectFormat(this)">
+          <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M28 6H4a2 2 0 00-2 2v16a2 2 0 004 2h24a2 2 0 002-2V8a2 2 0 00-2-2zm0 18H4V8h24z"/></svg> Slide deck
+        </button>
+        <button class="export-format-btn" onclick="exportSelectFormat(this)">
+          <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M28 3H21v2h7v22H4V5h7V3H4a2 2 0 00-2 2v22a2 2 0 002 2h24a2 2 0 002-2V5a2 2 0 00-2-2z"/></svg> CSV data
+        </button>
+      </div>
+
+      <div class="export-section-label">Send to</div>
+      <div class="export-dest-row">
+        <button class="export-dest-btn export-dest-btn--active" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 54 54" fill="none" aria-hidden="true"><path d="M19.71 33.56a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22v4.22z" fill="#E01E5A"/><path d="M21.83 33.56a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V33.56z" fill="#E01E5A"/><path d="M26.05 19.71a4.22 4.22 0 01-4.22-4.22 4.22 4.22 0 018.44 0v4.22h-4.22z" fill="#36C5F0"/><path d="M26.05 21.83a4.22 4.22 0 010 8.44H15.49a4.22 4.22 0 010-8.44h10.56z" fill="#36C5F0"/><path d="M39.9 26.05a4.22 4.22 0 110 8.44 4.22 4.22 0 01-4.22-4.22v-4.22H39.9z" fill="#2EB67D"/><path d="M37.77 26.05a4.22 4.22 0 010-8.44h10.56a4.22 4.22 0 010 8.44H37.77z" fill="#2EB67D"/><path d="M33.56 39.9a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22V39.9z" fill="#ECB22E"/><path d="M33.56 37.77a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V37.77z" fill="#ECB22E"/></svg>
+          <div class="export-dest-btn__label">Slack</div>
+        </button>
+        <button class="export-dest-btn" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#0078D4"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Outlook</div>
+        </button>
+        <button class="export-dest-btn" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#6f6f6f"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Email</div>
+        </button>
+      </div>
+
+      <div class="export-input-row">
+        <label class="export-input-label" for="exportOnceChannel">Slack channel</label>
+        <input class="export-input" id="exportOnceChannel" type="text" placeholder="#sre-reports" value="#sre-reports">
+        <div class="export-input-hint">Type a channel name or paste a webhook URL</div>
+      </div>
+
+      <div class="export-section-label">Recipients</div>
+      <div class="export-tag-row">
+        <span class="export-tag">carlos@acme.com<button class="export-tag__remove" aria-label="Remove carlos@acme.com"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4l6.6 6.6L8 22.6 9.4 24l6.6-6.6 6.6 6.6 1.4-1.4-6.6-6.6z"/></svg></button></span>
+        <span class="export-tag">sre-team@acme.com<button class="export-tag__remove" aria-label="Remove sre-team@acme.com"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4l6.6 6.6L8 22.6 9.4 24l6.6-6.6 6.6 6.6 1.4-1.4-6.6-6.6z"/></svg></button></span>
+      </div>
+      <div class="export-input-row">
+        <input class="export-input" type="text" placeholder="Add email or @user...">
+      </div>
+
+      <div class="export-section-label">Preview</div>
+      <div class="export-preview">
+        <div class="export-preview__row"><span class="export-preview__key">Sending</span><span class="export-preview__val">SRE summary, Incidents, Error rate</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Format</span><span class="export-preview__val">PDF</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Via</span><span class="export-preview__val">Slack · #sre-reports</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Date range</span><span class="export-preview__val">Last 30 days</span></div>
+      </div>
+
+    </div><!-- /exportBody-once -->
+
+    <!-- ══════════ TAB 2: SCHEDULED ══════════ -->
+    <div class="export-tab-body" id="exportBody-schedule" role="tabpanel" aria-labelledby="exportTab-schedule">
+
+      <div class="export-section-label">Frequency</div>
+      <div class="export-schedule-row">
+        <div class="export-select-wrap">
+          <select class="export-select" aria-label="Cadence"><option>Daily</option><option selected>Weekly</option><option>Monthly</option></select>
+        </div>
+        <div class="export-select-wrap">
+          <select class="export-select" aria-label="Day"><option>Monday</option><option selected>Friday</option><option>Sunday</option></select>
+        </div>
+      </div>
+      <div class="export-schedule-row">
+        <div class="export-select-wrap">
+          <select class="export-select" aria-label="Time"><option>06:00</option><option>07:00</option><option selected>08:00</option><option>09:00</option></select>
+        </div>
+        <div class="export-select-wrap">
+          <select class="export-select" aria-label="Timezone"><option selected>IST (UTC+5:30)</option><option>UTC</option><option>EST (UTC-5)</option></select>
+        </div>
+      </div>
+
+      <div class="export-section-label">What to include</div>
+      <div class="export-content-list">
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb export-cb--checked"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">SRE summary</div><div class="export-content-item__sub">MTTR, error rate, SLO budget status</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb export-cb--checked"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">Week-over-week trend</div><div class="export-content-item__sub">MTTR delta, SLO burn rate trend</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">Trace &amp; dependency map</div><div class="export-content-item__sub">Service graph, upstream/downstream impact</div></div>
+        </label>
+      </div>
+
+      <div class="export-section-label">Deliver to</div>
+      <div class="export-dest-row">
+        <button class="export-dest-btn export-dest-btn--active" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 54 54" fill="none" aria-hidden="true"><path d="M19.71 33.56a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22v4.22z" fill="#E01E5A"/><path d="M21.83 33.56a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V33.56z" fill="#E01E5A"/><path d="M26.05 19.71a4.22 4.22 0 01-4.22-4.22 4.22 4.22 0 018.44 0v4.22h-4.22z" fill="#36C5F0"/><path d="M26.05 21.83a4.22 4.22 0 010 8.44H15.49a4.22 4.22 0 010-8.44h10.56z" fill="#36C5F0"/><path d="M39.9 26.05a4.22 4.22 0 110 8.44 4.22 4.22 0 01-4.22-4.22v-4.22H39.9z" fill="#2EB67D"/><path d="M37.77 26.05a4.22 4.22 0 010-8.44h10.56a4.22 4.22 0 010 8.44H37.77z" fill="#2EB67D"/><path d="M33.56 39.9a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22V39.9z" fill="#ECB22E"/><path d="M33.56 37.77a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V37.77z" fill="#ECB22E"/></svg>
+          <div class="export-dest-btn__label">Slack</div>
+        </button>
+        <button class="export-dest-btn" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#0078D4"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Outlook</div>
+        </button>
+        <button class="export-dest-btn" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#6f6f6f"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Email</div>
+        </button>
+      </div>
+
+      <div class="export-input-row">
+        <label class="export-input-label" for="exportSchedChannel">Slack channel</label>
+        <input class="export-input" id="exportSchedChannel" type="text" placeholder="#sre-reports" value="#sre-reports">
+      </div>
+
+      <div class="export-section-label">Preview</div>
+      <div class="export-preview">
+        <div class="export-preview__row"><span class="export-preview__key">Cadence</span><span class="export-preview__val">Every Friday · 08:00 IST</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Includes</span><span class="export-preview__val">SRE summary + WoW trend</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Via</span><span class="export-preview__val">Slack · #sre-reports</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Next delivery</span><span class="export-preview__val">Friday, Aug 29 · 08:00</span></div>
+      </div>
+
+    </div><!-- /exportBody-schedule -->
+
+    <!-- ══════════ TAB 3: CRITICAL ALERTS ══════════ -->
+    <div class="export-tab-body" id="exportBody-alerts" role="tabpanel" aria-labelledby="exportTab-alerts">
+
+      <p style="font-size:13px;color:#525252;line-height:1.6;margin-bottom:20px">Get notified instantly when a critical SRE event occurs — without waiting for the next scheduled report.</p>
+
+      <div class="export-section-label">Notify me on</div>
+      <div class="export-alert-row">
+        <button class="export-alert-chip export-alert-chip--critical export-alert-chip--active" onclick="exportToggleChip(this)">
+          <span class="export-alert-chip__dot" style="background:#da1e28"></span> Critical
+        </button>
+        <button class="export-alert-chip export-alert-chip--high export-alert-chip--active" onclick="exportToggleChip(this)">
+          <span class="export-alert-chip__dot" style="background:#ff832b"></span> High
+        </button>
+        <button class="export-alert-chip export-alert-chip--warn" onclick="exportToggleChip(this)">
+          <span class="export-alert-chip__dot" style="background:#f1c21b"></span> Warning
+        </button>
+      </div>
+
+      <div class="export-section-label">Conditions</div>
+      <div class="export-toggle-row" onclick="exportToggleSwitch(this)">
+        <div class="export-toggle-label">SLO error budget exhausted<span>Trigger when any service burns &gt;80% of weekly error budget</span></div>
+        <div class="export-toggle-track export-toggle-track--on"><div class="export-toggle-thumb"></div></div>
+      </div>
+      <div class="export-toggle-row" onclick="exportToggleSwitch(this)">
+        <div class="export-toggle-label">P1 / P2 incident opened<span>Trigger when a new Priority 1 or Priority 2 incident is created</span></div>
+        <div class="export-toggle-track export-toggle-track--on"><div class="export-toggle-thumb"></div></div>
+      </div>
+      <div class="export-toggle-row" onclick="exportToggleSwitch(this)">
+        <div class="export-toggle-label">MTTR regression<span>Trigger when mean time to resolve increases &gt;20% week-over-week</span></div>
+        <div class="export-toggle-track"><div class="export-toggle-thumb"></div></div>
+      </div>
+      <div class="export-toggle-row" onclick="exportToggleSwitch(this)">
+        <div class="export-toggle-label">Error rate spike<span>Trigger when service error rate exceeds 5% for &gt;5 minutes</span></div>
+        <div class="export-toggle-track"><div class="export-toggle-thumb"></div></div>
+      </div>
+
+      <div class="export-section-label">Deliver alerts to</div>
+      <div class="export-dest-row">
+        <button class="export-dest-btn export-dest-btn--active" onclick="exportSelectDestAlert(this)">
+          <svg width="20" height="20" viewBox="0 0 54 54" fill="none" aria-hidden="true"><path d="M19.71 33.56a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22v4.22z" fill="#E01E5A"/><path d="M21.83 33.56a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V33.56z" fill="#E01E5A"/><path d="M26.05 19.71a4.22 4.22 0 01-4.22-4.22 4.22 4.22 0 018.44 0v4.22h-4.22z" fill="#36C5F0"/><path d="M26.05 21.83a4.22 4.22 0 010 8.44H15.49a4.22 4.22 0 010-8.44h10.56z" fill="#36C5F0"/><path d="M39.9 26.05a4.22 4.22 0 110 8.44 4.22 4.22 0 01-4.22-4.22v-4.22H39.9z" fill="#2EB67D"/><path d="M37.77 26.05a4.22 4.22 0 010-8.44h10.56a4.22 4.22 0 010 8.44H37.77z" fill="#2EB67D"/><path d="M33.56 39.9a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22V39.9z" fill="#ECB22E"/><path d="M33.56 37.77a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V37.77z" fill="#ECB22E"/></svg>
+          <div class="export-dest-btn__label">Slack</div>
+        </button>
+        <button class="export-dest-btn export-dest-btn--active" onclick="exportSelectDestAlert(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#0078D4"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Outlook</div>
+        </button>
+        <button class="export-dest-btn" onclick="exportSelectDestAlert(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#6f6f6f"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Email</div>
+        </button>
+      </div>
+
+      <div class="export-input-row">
+        <label class="export-input-label" for="exportAlertChannel">Slack channel</label>
+        <input class="export-input" id="exportAlertChannel" type="text" placeholder="#sre-alerts" value="#sre-alerts">
+        <div class="export-input-hint">Separate from your scheduled report channel</div>
+      </div>
+
+      <div class="export-section-label">Active configuration</div>
+      <div class="export-preview">
+        <div class="export-preview__row"><span class="export-preview__key">Triggers</span><span class="export-preview__val">Critical, High · SLO exhausted · P1/P2</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Via</span><span class="export-preview__val">Slack #sre-alerts · Outlook</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Status</span><span class="export-preview__val" style="color:#24a148">&#x25CF; Active</span></div>
+      </div>
+
+    </div><!-- /exportBody-alerts -->
+
+  </div><!-- /export-panel__body -->
+
+  <!-- Footer -->
+  <div class="export-panel__footer">
+    <button class="export-btn-primary" id="exportConfirmBtn" onclick="exportConfirm()">Send now</button>
+    <button class="export-btn-ghost" onclick="closeExportPanel()">Cancel</button>
+  </div>
+
+</aside><!-- /export-panel -->
+
+<!-- Export success toast -->
+<div class="export-toast" id="exportToast" role="alert" aria-live="assertive">
+  <svg class="export-toast__icon" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M14 21.4l-5-5 1.4-1.4 3.6 3.6 7.6-7.6 1.4 1.4z"/>
+    <path d="M16 2a14 14 0 1014 14A14 14 0 0016 2zm0 26a12 12 0 1112-12 12 12 0 01-12 12z"/>
+  </svg>
+  <div>
+    <div class="export-toast__title" id="exportToastTitle">Report sent</div>
+    <div class="export-toast__body"  id="exportToastBody">Delivered to #sre-reports via Slack</div>
+  </div>
+</div>
+
+</body>
+</html>

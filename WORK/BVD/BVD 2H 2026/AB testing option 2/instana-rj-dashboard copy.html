@@ -1,0 +1,3587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IBM Instana — DevOps Dashboard · RJ</title>
+
+  <!-- IBM Plex Sans & Mono -->
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { overflow-x: hidden; }
+    body {
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      background: #f4f4f4;
+      color: #161616;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    button { font-family: inherit; cursor: pointer; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SHELL — HEADER (48px fixed, dark #161616)
+    ═══════════════════════════════════════════════════════════════ */
+    .shell-header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 48px;
+      background: #161616;
+      display: flex;
+      align-items: stretch;
+      z-index: 9000;
+    }
+    .shell-header__brand {
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 4px;
+      color: #f4f4f4;
+      font-size: 14px;
+      white-space: nowrap;
+      min-width: 114px;
+    }
+    .shell-header__brand-ibm { font-weight: 700; }
+    .shell-header__brand-product { font-weight: 400; }
+    .shell-header__spacer { flex: 1; }
+    .shell-header__actions { display: flex; align-items: stretch; }
+    .shell-header__action {
+      width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none;
+      color: #f4f4f4;
+      transition: background 110ms;
+    }
+    .shell-header__action:hover { background: #2d2d2d; }
+    .shell-header__action svg { fill: #f4f4f4; display: block; }
+
+    /* ── Scenario toggle CTA button ──────────────────────────────── */
+    #demoToggleBtn {
+      display: flex; align-items: center;
+      height: 48px; padding: 0 16px;
+      background: transparent; border: none; border-left: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.45);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px; letter-spacing: 0.08em;
+      cursor: pointer; transition: color 110ms; white-space: nowrap;
+    }
+    #demoToggleBtn:hover { color: rgba(255,255,255,0.75); }
+    #demoToggleBtn.active { color: rgba(255,255,255,0.75); }
+
+    /* ── Persona switcher ─────────────────────────────────────────── */
+    .persona-switcher { position: relative; display: flex; align-items: stretch; }
+    .persona-switcher__btn {
+      width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #f4f4f4;
+      cursor: pointer; transition: background 110ms;
+    }
+    .persona-switcher__btn:hover,
+    .persona-switcher__btn[aria-expanded="true"] { background: #2d2d2d; }
+    .persona-switcher__btn svg { fill: #f4f4f4; display: block; }
+    .persona-dropdown {
+      display: none;
+      position: fixed; top: 48px; right: 0;
+      width: 220px;
+      background: #262626;
+      border: 1px solid #393939;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      z-index: 9100;
+    }
+    .persona-dropdown[aria-hidden="false"] { display: block; }
+    .persona-dropdown__label {
+      padding: 12px 16px 8px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.32px;
+      color: #8d8d8d; text-transform: uppercase;
+    }
+    .persona-dropdown__item {
+      display: flex; align-items: center; gap: 12px;
+      width: 100%; padding: 0 16px; height: 48px;
+      background: transparent; border: none;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px; color: #f4f4f4;
+      cursor: pointer; text-align: left;
+      transition: background 110ms; text-decoration: none;
+    }
+    .persona-dropdown__item:hover { background: #353535; }
+    .persona-dropdown__item--active { background: #393939; }
+    .persona-dropdown__avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; color: #ffffff;
+      flex-shrink: 0; line-height: 1;
+    }
+    .persona-dropdown__name { flex: 1; }
+    .persona-dropdown__check {
+      width: 16px; height: 16px; flex-shrink: 0;
+      fill: #78a9ff; display: none;
+    }
+    .persona-dropdown__item--active .persona-dropdown__check { display: block; }
+    .persona-dropdown__divider { height: 1px; background: #393939; margin: 4px 0; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SHELL — SIDE NAV (48px wide, fixed, dark #262626)
+    ═══════════════════════════════════════════════════════════════ */
+    .shell-sidenav {
+      position: fixed;
+      top: 48px; left: 0; bottom: 0;
+      width: 48px;
+      background: #262626;
+      display: flex;
+      flex-direction: column;
+      z-index: 8000;
+      overflow: hidden;
+    }
+    .sidenav-group { display: flex; flex-direction: column; }
+    .sidenav-sep { height: 1px; background: #393939; margin: 4px 0; }
+    .sidenav-item {
+      width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none;
+      border-left: 3px solid transparent;
+      color: #8d8d8d;
+      transition: background 110ms, color 110ms;
+      position: relative; flex-shrink: 0;
+    }
+    .sidenav-item:hover { background: #353535; color: #f4f4f4; }
+    .sidenav-item--active { color: #f4f4f4; background: #393939; border-left-color: #4589ff; }
+    .sidenav-item svg { fill: currentColor; display: block; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       MAIN LAYOUT — shifts left when chat opens
+    ═══════════════════════════════════════════════════════════════ */
+    .page-layout {
+      margin-top: 48px;
+      margin-left: 48px;
+      margin-right: 0;
+      background: #ffffff;
+      min-height: calc(100vh - 48px);
+      transition: margin-right 220ms cubic-bezier(0.2,0,0.38,0.9);
+    }
+    body.chat-open .page-layout {
+      margin-right: 320px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       AI CHAT PANEL — fixed right side drawer
+    ═══════════════════════════════════════════════════════════════ */
+    /* ── Carbon for AI Chat Shell — White theme ─────────────────────────────── */
+    .chat-panel {
+      position: fixed;
+      top: 48px; right: 0; bottom: 0;
+      width: 320px;
+      background: #ffffff;           /* $background White */
+      border-left: 1px solid #e0e0e0; /* $border-subtle-01 */
+      display: flex;
+      flex-direction: column;
+      z-index: 8500;
+      transform: translateX(100%);
+      transition: transform 220ms cubic-bezier(0.2,0,0.38,0.9);
+      overflow: hidden;
+    }
+    body.chat-open .chat-panel {
+      transform: translateX(0);
+    }
+
+    /* Header — white bg, bold "AI Chat" title, outlined AI badge + action icons */
+    .chat-panel__header {
+      height: 56px;
+      background: #ffffff;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      padding: 0 8px 0 16px;
+      flex-shrink: 0;
+      gap: 4px;
+    }
+    /* Outlined "AI" badge — square border, black text (Carbon AI stamp) */
+    .chat-panel__header-ai {
+      width: 36px; height: 36px;
+      background: transparent;
+      border: 2px solid #161616;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .chat-panel__header-ai-text {
+      font-size: 11px; font-weight: 700; color: #161616;
+      font-family: 'IBM Plex Sans', sans-serif;
+      letter-spacing: 0; line-height: 1;
+    }
+    .chat-panel__header-title {
+      flex: 1;
+      font-size: 16px; font-weight: 700; color: #161616;
+      letter-spacing: 0.16px;
+    }
+    /* Ghost icon buttons in header */
+    .chat-panel__header-action {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #161616;
+      cursor: pointer; transition: background 110ms; flex-shrink: 0;
+    }
+    .chat-panel__header-action:hover { background: #e8e8e8; }
+    .chat-panel__header-action svg { fill: #161616; display: block; }
+    /* Keep old class name working (close button) */
+    .chat-panel__header-close {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #161616;
+      cursor: pointer; transition: background 110ms; flex-shrink: 0;
+    }
+    .chat-panel__header-close:hover { background: #e8e8e8; }
+    .chat-panel__header-close svg { fill: #161616; display: block; }
+
+    .chat-panel__context {
+      display: none;
+    }
+
+    .chat-panel__messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      scroll-behavior: smooth;
+      background: #ffffff;
+    }
+    .chat-panel__messages::-webkit-scrollbar { width: 4px; }
+    .chat-panel__messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-panel__messages::-webkit-scrollbar-thumb { background: #c6c6c6; border-radius: 2px; }
+
+    /* Welcome message — no card, just content like the Figma */
+    .chat-welcome {
+      background: transparent;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    /* Watsonx orbital avatar row */
+    .chat-welcome__avatar-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 12px;
+    }
+    .chat-welcome__avatar-row span {
+      font-size: 12px; color: #525252; /* $text-secondary */
+      font-family: 'IBM Plex Sans', sans-serif; letter-spacing: 0.32px;
+    }
+    /* Watsonx orbital avatar — SVG circles */
+    .chat-welcome__wx-avatar {
+      width: 32px; height: 32px;
+      flex-shrink: 0;
+    }
+    /* Welcome headings */
+    .chat-welcome__heading {
+      font-size: 16px; font-weight: 600; color: #161616; /* $productive-heading-02 */
+      line-height: 22px; letter-spacing: 0; margin: 0 0 4px;
+    }
+    .chat-welcome__sub {
+      font-size: 20px; font-weight: 300; color: #161616; /* $expressive-heading-03 */
+      line-height: 28px; letter-spacing: 0; margin: 0 0 24px;
+    }
+    /* Unused old selectors — kept to avoid breakage */
+    .chat-welcome__row { display: flex; align-items: flex-start; gap: 8px; }
+    .chat-welcome__avatar { display: none; }
+    .chat-welcome__name { display: none; }
+    .chat-welcome__text { display: none; }
+    .chat-welcome__suggestions { display: none; }
+    .chat-welcome__icon { display: none; }
+
+    /* Suggestion pill buttons — outlined rounded, blue text+border */
+    .chat-suggestions {
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .chat-suggestion {
+      background: #ffffff;
+      border: 1px solid #0f62fe;    /* $interactive */
+      border-radius: 20px;           /* pill shape */
+      padding: 8px 20px;
+      font-size: 14px; font-weight: 400;
+      color: #0f62fe;               /* $link-primary */
+      font-family: 'IBM Plex Sans', sans-serif;
+      text-align: left; cursor: pointer;
+      transition: background 110ms, border-color 110ms;
+      line-height: 20px; letter-spacing: 0.16px;
+      display: inline-block; width: fit-content;
+    }
+    .chat-suggestion:hover {
+      background: #edf5ff;          /* $highlight */
+      border-color: #0043ce;
+      color: #0043ce;
+    }
+    .chat-msg { display: flex; flex-direction: column; margin-bottom: 28px; }
+    .chat-msg--user { align-items: flex-end; }
+    .chat-msg--ai { align-items: flex-start; }
+    .chat-msg__meta-row {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 4px;
+    }
+    .chat-msg--user .chat-msg__meta-row { flex-direction: row-reverse; }
+    .chat-msg__bubble-row { display: flex; align-items: flex-end; gap: 8px; }
+    .chat-msg--user .chat-msg__bubble-row { flex-direction: row-reverse; }
+    .chat-msg__ai-avatar {
+      width: 36px; height: 36px;
+      flex-shrink: 0;
+    }
+    .chat-msg__avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: #ff832b;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #fff;
+      flex-shrink: 0; font-family: 'IBM Plex Sans', sans-serif; line-height: 1;
+    }
+    .chat-msg__sender {
+      font-size: 12px; color: #525252;
+      letter-spacing: 0.32px;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .chat-msg__bubble {
+      max-width: 240px;
+      padding: 10px 12px;
+      font-size: 14px; line-height: 20px; letter-spacing: 0.16px;
+    }
+    .chat-msg--user .chat-msg__bubble {
+      background: #e8e8e8; color: #161616;
+      border-radius: 12px 12px 0 12px;
+    }
+    .chat-msg--ai .chat-msg__bubble {
+      background: #ffffff; color: #161616;
+      border-radius: 0 12px 12px 12px;
+    }
+    .chat-msg__feedback {
+      display: flex; align-items: center; gap: 2px;
+      margin-top: 6px;
+    }
+    .chat-feedback-btn {
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #6f6f6f;
+      cursor: pointer; transition: background 110ms, color 110ms;
+      border-radius: 2px;
+    }
+    .chat-feedback-btn:hover { background: #e8e8e8; color: #161616; }
+    .chat-feedback-btn svg { fill: currentColor; display: block; }
+    .chat-msg__bubble--chart {
+      max-width: 100%;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 14px;
+    }
+    .chat-msg__time {
+      font-size: 11px; color: #8d8d8d;
+      letter-spacing: 0.32px;
+    }
+
+    .chat-typing {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 28px;
+    }
+    .chat-typing__avatar {
+      width: 36px; height: 36px; flex-shrink: 0;
+    }
+    .chat-typing__dots {
+      background: transparent;
+      padding: 4px 0; border-radius: 0;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .chat-typing__dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #8d8d8d;
+      animation: chat-dot-bounce 1.2s ease-in-out infinite;
+    }
+    .chat-typing__dot:nth-child(2) { animation-delay: 0.2s; }
+    .chat-typing__dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes chat-dot-bounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    /* Citation chips */
+    .chat-citations { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+    .chat-citation {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #e8e8e8; border: 1px solid #c6c6c6;
+      padding: 2px 8px; font-size: 11px; color: #0f62fe; cursor: pointer;
+      transition: background 110ms;
+    }
+    .chat-citation:hover { background: #d1d1d1; }
+    .chat-citation svg { fill: #0f62fe; flex-shrink: 0; }
+
+    .chat-date-divider {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: #8d8d8d; letter-spacing: 0.32px;
+      margin-bottom: 28px;
+    }
+    .chat-date-divider::before,
+    .chat-date-divider::after {
+      content: ''; flex: 1; height: 1px; background: #e0e0e0;
+    }
+
+    .chat-panel__footer {
+      flex-shrink: 0;
+      background: #f0f4ff;
+      border-top: 1px solid #e0e0e0;
+    }
+    .chat-panel__actions-row {
+      display: none;
+    }
+    .chat-panel__action-btn {
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #525252;
+      cursor: pointer; transition: background 110ms, color 110ms;
+    }
+    .chat-panel__action-btn:hover { background: #e8e8e8; color: #161616; }
+    .chat-panel__action-btn svg { fill: currentColor; }
+    .chat-panel__input-row {
+      display: flex; align-items: center;
+      padding: 14px 16px;
+      gap: 8px;
+      background: #ffffff;
+    }
+    .chat-panel__input-wrap {
+      flex: 1;
+      background: transparent;
+      border: none;
+      display: flex; align-items: center;
+      min-height: 24px; padding: 0;
+    }
+    .chat-panel__input {
+      flex: 1; background: transparent; border: none; outline: none;
+      font-size: 15px; color: #161616; font-family: 'IBM Plex Sans', sans-serif;
+      padding: 0; resize: none; min-height: 24px; max-height: 120px;
+      line-height: 20px; letter-spacing: 0.16px;
+    }
+    .chat-panel__input::placeholder { color: #a8a8a8; }
+    .chat-panel__send {
+      width: 32px; height: 32px;
+      background: transparent; border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: background 110ms; flex-shrink: 0;
+      border-radius: 2px;
+    }
+    .chat-panel__send:hover { background: #e8e8e8; }
+    .chat-panel__send:disabled { opacity: 0.4; cursor: not-allowed; }
+    .chat-panel__send svg { fill: #525252; }
+    .chat-panel__disclaimer {
+      display: none;
+    }
+
+    /* ── Trace / Incident Detail Panel ──────────────────────────────── */
+    .trace-panel-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 8300;
+    }
+    body.trace-panel-open .trace-panel-backdrop {
+      display: block;
+    }
+
+    /* Panel shell */
+    .trace-panel {
+      position: fixed;
+      top: 48px; right: 0; bottom: 0;
+      width: 600px;
+      background: #ffffff;
+      border-left: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      z-index: 8400;
+      transform: translateX(100%);
+      transition: transform 220ms cubic-bezier(0.2,0,0.38,0.9);
+      overflow: hidden;
+    }
+    body.trace-panel-open .trace-panel {
+      transform: translateX(0);
+    }
+
+    /* Panel header — critical red for P1 */
+    .trace-panel__header {
+      background: #da1e28;
+      color: #ffffff;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .trace-panel__header-title {
+      flex: 1;
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      letter-spacing: 0.16px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .trace-panel__header-sub {
+      font-size: 12px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.8);
+      letter-spacing: 0.32px;
+      margin-top: 2px;
+    }
+    .trace-panel__header-text { flex: 1; min-width: 0; }
+    .trace-panel__p1-badge {
+      display: inline-flex;
+      align-items: center;
+      height: 20px;
+      padding: 0 8px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.5);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.16px;
+      border-radius: 2px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .trace-panel__close {
+      width: 40px; height: 40px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background 110ms;
+      flex-shrink: 0;
+    }
+    .trace-panel__close:hover { background: rgba(255,255,255,0.15); }
+    .trace-panel__close svg { fill: #ffffff; display: block; }
+
+    /* Tab bar */
+    .trace-panel__tabs {
+      height: 48px;
+      background: #ffffff;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: stretch;
+      flex-shrink: 0;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .trace-panel__tabs::-webkit-scrollbar { display: none; }
+    .trace-panel__tab-btn {
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      color: #525252;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: color 110ms, border-color 110ms, background 110ms;
+    }
+    .trace-panel__tab-btn:hover { background: #f4f4f4; color: #161616; }
+    .trace-panel__tab-btn--active {
+      color: #0f62fe;
+      border-bottom-color: #0f62fe;
+      font-weight: 600;
+    }
+
+    /* Scrollable body */
+    .trace-panel__body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+      scrollbar-width: thin;
+      scrollbar-color: #c6c6c6 transparent;
+    }
+    .trace-panel__body::-webkit-scrollbar { width: 4px; }
+    .trace-panel__body::-webkit-scrollbar-track { background: transparent; }
+    .trace-panel__body::-webkit-scrollbar-thumb { background: #c6c6c6; border-radius: 2px; }
+
+    /* Tab panes */
+    .trace-panel__tab-pane { display: none; padding: 24px 24px 32px; }
+    .trace-panel__tab-pane--active { display: block; }
+
+    /* Sticky footer */
+    .trace-panel__footer {
+      height: 64px;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      padding: 0 24px;
+      gap: 12px;
+      flex-shrink: 0;
+      background: #ffffff;
+    }
+    .tp-btn-primary {
+      display: inline-flex;
+      align-items: center;
+      height: 40px;
+      padding: 0 16px;
+      background: #0f62fe;
+      color: #ffffff;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      border: none;
+      cursor: pointer;
+      transition: background 110ms;
+      gap: 8px;
+    }
+    .tp-btn-primary:hover { background: #0353e9; }
+    .tp-btn-primary svg { fill: #ffffff; flex-shrink: 0; }
+    .tp-btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      height: 40px;
+      padding: 0 16px;
+      background: transparent;
+      color: #0f62fe;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      border: 1px solid #0f62fe;
+      cursor: pointer;
+      transition: background 110ms;
+    }
+    .tp-btn-ghost:hover { background: #d0e2ff; }
+    .tp-btn-danger-ghost {
+      display: inline-flex;
+      align-items: center;
+      height: 40px;
+      padding: 0 16px;
+      background: transparent;
+      color: #da1e28;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      border: 1px solid #da1e28;
+      cursor: pointer;
+      transition: background 110ms;
+    }
+    .tp-btn-danger-ghost:hover { background: #fff1f1; }
+
+    /* ── Tab 1: AI Summary ──────────────────────────────────────────── */
+    .tp-ai-block {
+      background: #edf5ff;
+      border-left: 3px solid #0f62fe;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .tp-ai-block__meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .tp-ai-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px; height: 20px;
+      background: #0f62fe;
+      color: #ffffff;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0;
+      flex-shrink: 0;
+    }
+    .tp-ai-block__label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #0043ce;
+      letter-spacing: 0.32px;
+      text-transform: uppercase;
+    }
+    .tp-ai-block__timestamp {
+      font-size: 11px;
+      color: #525252;
+      margin-left: auto;
+    }
+    .tp-ai-block__text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #161616;
+    }
+    .tp-section-heading {
+      font-size: 12px;
+      font-weight: 600;
+      color: #525252;
+      letter-spacing: 0.32px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .tp-key-metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: #e0e0e0;
+      border: 1px solid #e0e0e0;
+      margin-bottom: 24px;
+    }
+    .tp-metric-cell {
+      background: #ffffff;
+      padding: 12px 14px;
+    }
+    .tp-metric-cell__label {
+      font-size: 11px;
+      font-weight: 400;
+      color: #525252;
+      letter-spacing: 0.32px;
+      margin-bottom: 4px;
+    }
+    .tp-metric-cell__value {
+      font-size: 20px;
+      font-weight: 600;
+      color: #161616;
+      font-family: 'IBM Plex Mono', monospace;
+      line-height: 1.2;
+    }
+    .tp-metric-cell__value--critical { color: #da1e28; }
+    .tp-metric-cell__value--warning  { color: #8e6a00; }
+    .tp-metric-cell__value--ok       { color: #198038; }
+
+    /* ── Tab 2: Infra Details ───────────────────────────────────────── */
+    .tp-metric-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f4f4f4;
+      gap: 16px;
+    }
+    .tp-metric-row:last-child { border-bottom: none; }
+    .tp-metric-row__key {
+      font-size: 13px;
+      font-weight: 400;
+      color: #525252;
+      flex-shrink: 0;
+    }
+    .tp-metric-row__val {
+      font-size: 13px;
+      font-weight: 500;
+      color: #161616;
+      text-align: right;
+      font-family: 'IBM Plex Mono', monospace;
+      word-break: break-all;
+    }
+    .tp-metric-row__val--critical { color: #da1e28; }
+    .tp-metric-row__val--warning  { color: #8e6a00; }
+    .tp-metric-row__val--ok       { color: #198038; }
+    .tp-callout {
+      background: #fff8f8;
+      border-left: 3px solid #da1e28;
+      padding: 12px 14px;
+      margin-top: 20px;
+      font-size: 13px;
+      color: #161616;
+      line-height: 1.5;
+    }
+    .tp-callout strong { color: #da1e28; }
+
+    /* ── Tab 3: Actions ─────────────────────────────────────────────── */
+    .tp-actions-intro {
+      font-size: 13px;
+      color: #525252;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .tp-action-list { display: flex; flex-direction: column; gap: 10px; }
+    .tp-action-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1px solid #e0e0e0;
+      background: #ffffff;
+      cursor: pointer;
+      transition: background 110ms, border-color 110ms;
+      text-align: left;
+      width: 100%;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .tp-action-item:hover { background: #f4f4f4; border-color: #c6c6c6; }
+    .tp-action-item--primary { border-color: #0f62fe; background: #edf5ff; }
+    .tp-action-item--primary:hover { background: #d0e2ff; }
+    .tp-action-item--danger  { border-color: #da1e28; }
+    .tp-action-item--danger:hover  { background: #fff1f1; }
+    .tp-action-item__icon {
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .tp-action-item__icon svg { display: block; }
+    .tp-action-item__content { flex: 1; min-width: 0; }
+    .tp-action-item__title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #161616;
+      margin-bottom: 2px;
+    }
+    .tp-action-item--primary .tp-action-item__title { color: #0043ce; }
+    .tp-action-item--danger  .tp-action-item__title { color: #da1e28; }
+    .tp-action-item__desc {
+      font-size: 12px;
+      color: #525252;
+      line-height: 1.4;
+    }
+    .tp-action-item__badge {
+      display: inline-flex;
+      align-items: center;
+      height: 16px;
+      padding: 0 6px;
+      font-size: 10px;
+      font-weight: 500;
+      border-radius: 2px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+    .tp-action-item__badge--ai { background: #dde1ff; color: #0043ce; }
+    .tp-action-item__badge--urgent { background: #fff1f1; color: #da1e28; }
+
+    /* ── Tab 4: Team ────────────────────────────────────────────────── */
+    .tp-team-intro {
+      font-size: 13px;
+      color: #525252;
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+    .tp-person-card {
+      border: 1px solid #e0e0e0;
+      background: #ffffff;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+    .tp-person-card__top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .tp-person-card__avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+    .tp-person-card__avatar--carlos {
+      background: #defbe6;
+      color: #0e6027;
+      border: 1px solid #0e6027;
+    }
+    .tp-person-card__name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #161616;
+    }
+    .tp-person-card__role {
+      font-size: 12px;
+      color: #525252;
+      margin-top: 1px;
+    }
+    .tp-person-card__context {
+      font-size: 13px;
+      color: #525252;
+      line-height: 1.5;
+      padding: 12px 14px;
+      background: #f4f4f4;
+      border-left: 3px solid #0e6027;
+      margin-bottom: 14px;
+    }
+    .tp-person-card__actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tp-btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 14px;
+      background: transparent;
+      color: #161616;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      border: 1px solid #c6c6c6;
+      cursor: pointer;
+      transition: background 110ms;
+    }
+    .tp-btn-secondary:hover { background: #e8e8e8; }
+    .tp-btn-green {
+      display: inline-flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 14px;
+      background: #0e6027;
+      color: #ffffff;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      border: none;
+      cursor: pointer;
+      transition: background 110ms;
+    }
+    .tp-btn-green:hover { background: #0b4d1f; }
+
+
+
+    /* Active state for dashboard's AI toggle button */
+    .view-btn--ai--active {
+      background: #0353e9 !important;
+      box-shadow: inset 0 0 0 2px #78a9ff;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       PAGE HEADER
+    ═══════════════════════════════════════════════════════════════ */
+    .page-header { background: #ffffff; padding: 0 32px; border-bottom: none; }
+    .page-header__title-row {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 76px;
+    }
+    .page-header__title { font-size: 28px; font-weight: 300; color: #161616; line-height: 1.25; }
+    .page-header__title strong { font-weight: 600; }
+
+    .period-selector {
+      display: flex; align-items: stretch;
+      border: 1px solid #c6c6c6; height: 42px;
+    }
+    .period-selector__date {
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 0 16px 0 13px; min-width: 130px;
+      cursor: pointer; background: #ffffff; border: none;
+      border-right: 1px solid #c6c6c6;
+    }
+    .period-selector__date-label { font-size: 11px; color: #525252; line-height: 1.3; }
+    .period-selector__date-range {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 14px; color: #161616; font-weight: 400;
+    }
+    .period-selector__date-range svg { fill: #161616; flex-shrink: 0; }
+    .period-selector__live {
+      display: flex; align-items: center; gap: 4px;
+      padding: 0 15px; background: #ffffff; border: none;
+      font-size: 14px; color: #161616; cursor: pointer;
+      border-left: 1px solid #c6c6c6; white-space: nowrap;
+    }
+    .period-selector__live:hover { background: #f4f4f4; }
+    .live-dot { width: 8px; height: 8px; background: #24a148; border-radius: 50%; display: inline-block; }
+    .period-selector__live .plus { font-weight: 400; color: #525252; }
+
+    .page-tabs {
+      display: flex; align-items: stretch; height: 42px;
+      border-bottom: 1px solid #c6c6c6;
+      margin: 0 -32px; padding: 0 32px;
+    }
+    .page-tab {
+      display: flex; align-items: center; padding: 0 16px;
+      font-size: 14px; color: #525252; background: transparent; border: none;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      cursor: pointer; white-space: nowrap; transition: color 110ms;
+    }
+    .page-tab:hover { color: #161616; }
+    .page-tab--active { color: #161616; border-bottom-color: #4589ff; font-weight: 500; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       FILTER BAR
+    ═══════════════════════════════════════════════════════════════ */
+    .filter-bar {
+      display: flex; align-items: stretch; height: 40px;
+      border-bottom: 1px solid #c6c6c6; background: #ffffff;
+    }
+    .filter-bar__spacer { flex: 1; min-width: 0; }
+    .filter-bar__divider { width: 1px; background: #c6c6c6; flex-shrink: 0; }
+    .filter-btn {
+      display: flex; align-items: center; gap: 4px;
+      padding: 0 16px; font-size: 14px; color: #161616;
+      background: transparent; border: none; height: 40px;
+      cursor: pointer; white-space: nowrap; transition: background 110ms;
+    }
+    .filter-btn:hover { background: #f4f4f4; }
+    .filter-btn--ghost { color: #0f62fe; }
+    .filter-btn svg { fill: currentColor; }
+    .view-btn--ai {
+      width: 40px; height: 40px; padding: 0;
+      background: #0f62fe; border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+    }
+    .view-btn--ai:hover { background: #0353e9; }
+    .ai-stamp {
+      display: flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; position: relative;
+    }
+    .ai-stamp::before { content: ''; position: absolute; inset: 0; border: 1.5px solid #ffffff; }
+    .ai-stamp__text {
+      font-size: 8px; font-weight: 700; color: #ffffff;
+      letter-spacing: -0.5px; line-height: 1;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       DASHBOARD CANVAS
+    ═══════════════════════════════════════════════════════════════ */
+    .dashboard-canvas { background: #f4f4f4; padding: 16px 32px 32px; }
+
+    /* ══════════════════════════════════════════════════════════════════
+       AI LEFT CARD — accent border: #4589ff → #0f62fe → #00b4d8
+    ══════════════════════════════════════════════════════════════════ */
+    .ai-left {
+      background: #f4f4f4;
+      position: relative; border: 1px solid #c6c6c6;
+      display: flex; flex-direction: column;
+      box-shadow: 0 4px 8px 0 rgba(69,137,255,0.10);
+      overflow: hidden;
+    }
+    .ai-left::after {
+      content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 1px;
+      background: linear-gradient(180deg, #4589ff 0%, #0f62fe 50%, #00b4d8 100%);
+      pointer-events: none; z-index: 10;
+    }
+    .ai-left__inner-glow {
+      position: absolute; inset: 0;
+      box-shadow: inset 0 -80px 70px -65px rgba(69,137,255,0.12);
+      pointer-events: none; z-index: 8;
+    }
+    .ai-left__header { height: 54px; display: flex; align-items: center; flex-shrink: 0; }
+    .ai-left__title-wrapper {
+      flex: 1; padding: 0 8px 0 16px; min-width: 0;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .ai-left__title { font-size: 16px; font-weight: 600; line-height: 22px; color: #161616; white-space: nowrap; }
+    .ai-left__icons {
+      width: 40px; height: 40px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ai-label-mini {
+      width: 16px; height: 16px; background: #0f62fe;
+      display: flex; align-items: center; justify-content: center; position: relative;
+    }
+    .ai-label-mini::before { content: ''; position: absolute; inset: 2px; border: 1px solid rgba(255,255,255,0.8); }
+    /* The .ai-label-mini__text span is now hidden; the AI SVG inside the element does the job */
+    .ai-label-mini__text { display: none; }
+
+    /* Tags */
+    .tag--green {
+      display: inline-flex; align-items: center;
+      height: 18px; padding: 0 8px;
+      background: #defbe6; color: #0e6027;
+      font-size: 12px; font-weight: 400; line-height: 1; border-radius: 9px;
+    }
+    .tag--yellow {
+      display: inline-flex; align-items: center;
+      height: 18px; padding: 0 8px;
+      background: #fdf6dd; color: #8e6a00;
+      font-size: 12px; font-weight: 400; line-height: 1; border-radius: 9px;
+    }
+    .tag--red {
+      display: inline-flex; align-items: center;
+      height: 18px; padding: 0 8px;
+      background: #fff1f1; color: #a2191f;
+      font-size: 12px; font-weight: 400; line-height: 1; border-radius: 9px;
+    }
+    .tag--blue {
+      display: inline-flex; align-items: center;
+      height: 18px; padding: 0 8px;
+      background: #dde1ff; color: #0043ce;
+      font-size: 11px; font-weight: 400; letter-spacing: 0.16px;
+      border-radius: 100px; white-space: nowrap; flex-shrink: 0;
+    }
+    .tag--devops {
+      display: inline-flex; align-items: center;
+      height: 18px; padding: 0 8px;
+      background: #edf5ff; color: #003a8c;
+      font-size: 11px; font-weight: 400; border-radius: 100px; white-space: nowrap; flex-shrink: 0;
+    }
+
+    /* AI insight tiles */
+    .ai-insight {
+      border-top: 1px solid #c6c6c6; border-bottom: 1px solid #c6c6c6;
+      flex-shrink: 0; position: relative;
+    }
+    .ai-insight + .ai-insight { border-top: none; }
+    .ai-insight__slot { padding: 8px 16px 0; }
+    .ai-insight__label {
+      font-size: 14px; font-weight: 600; line-height: 20px;
+      color: #525252; letter-spacing: 0.16px;
+    }
+    .ai-insight__label--urgent { color: #0f62fe; }
+    .ai-insight__label--warn   { color: #8e6a00; }
+    .ai-insight__value {
+      font-size: 12px; font-weight: 400; line-height: 16px;
+      color: #525252; letter-spacing: 0.32px; margin-top: 2px; padding-bottom: 16px;
+    }
+    .ai-insight__btn { height: 48px; display: flex; align-items: center; }
+    .ai-insight__ghost-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      height: 48px; padding: 0 16px;
+      font-size: 14px; font-weight: 400; color: #0f62fe;
+      background: transparent; border: none; cursor: pointer;
+      font-family: 'IBM Plex Sans', sans-serif; transition: background 110ms;
+    }
+    .ai-insight__ghost-btn:hover { background: #d0e2ff; }
+    .ai-insight__ghost-btn svg { fill: #0f62fe; flex-shrink: 0; }
+
+    /* AI Right strip */
+    .kpi-right-ai {
+      background: #edf5ff;
+      padding: 16px 56px 16px 16px;
+      position: relative; height: 169px; flex-shrink: 0;
+      display: flex; flex-direction: column; justify-content: flex-start;
+      border: 1px solid #c6c6c6; border-bottom: none;
+      box-shadow: 0 4px 8px 0 rgba(69,137,255,0.08);
+    }
+    .kpi-right-ai::after {
+      content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 2px;
+      background: linear-gradient(180deg, #4589ff 0%, #0f62fe 50%, #00b4d8 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .kpi-right-ai__meta { font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0.32px; color: #525252; margin-bottom: 12px; }
+    .kpi-right-ai__text { font-size: 28px; font-weight: 300; color: #161616; line-height: 1.32; letter-spacing: 0; }
+    .kpi-right-ai__badge {
+      position: absolute; top: 16px; right: 20px;
+      width: 16px; height: 16px; background: none;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      z-index: 1;               /* sit above ::after gradient border */
+    }
+    .kpi-right-ai__badge-inner {
+      width: 14px; height: 14px; border: 1.5px solid rgba(255,255,255,0.8);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 6px; font-weight: 700; color: #fff;
+      font-family: 'IBM Plex Sans', sans-serif; letter-spacing: -0.3px; line-height: 1;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════
+       LAYOUT GRID
+    ══════════════════════════════════════════════════════════════════ */
+    .summary-and-kpi {
+      display: grid;
+      grid-template-columns: 353fr 831fr;
+      gap: 16px; margin-bottom: 16px;
+    }
+    @media (max-width: 1056px) { .summary-and-kpi { grid-template-columns: 1fr; } }
+    .summary-and-kpi__left { display: flex; flex-direction: column; align-self: stretch; min-width: 0; }
+    .summary-and-kpi__right { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+    /* ══════════════════════════════════════════════════════════════════
+       KPI 2×2 GRID
+    ══════════════════════════════════════════════════════════════════ */
+    .kpi-2x2 {
+      position: relative; width: 100%;
+      border: 1px solid #e0e0e0; border-top: none;
+      background: #ffffff; box-sizing: border-box; overflow: hidden;
+    }
+    .kpi-row { display: flex; position: relative; width: 100%; }
+    .kpi-row--1 { height: 108px; border-bottom: 1px solid #e0e0e0; }
+    .kpi-row--2 { height: 106px; }
+    .kpi-cell {
+      flex: 1; min-width: 0; height: 100%; background: #ffffff;
+      padding: 16px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box;
+    }
+    .kpi-cell--right { border-left: 1px solid #e0e0e0; }
+    .kpi-cell__label { font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0.32px; color: #525252; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kpi-cell__value-wrap { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 4px; overflow: hidden; }
+    .kpi-cell__value { font-size: 28px; font-weight: 400; line-height: 36px; color: #161616; font-family: 'IBM Plex Sans', sans-serif; white-space: nowrap; }
+    .kpi-cell__unit { font-size: 14px; font-weight: 400; line-height: 20px; color: #525252; font-family: 'IBM Plex Sans', sans-serif; white-space: nowrap; align-self: flex-end; margin-bottom: 4px; }
+    .kpi-cell__subtitle-wrap { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 4px; }
+    .kpi-cell__helper { font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0.32px; color: #525252; white-space: nowrap; font-family: 'IBM Plex Sans', sans-serif; }
+    .kpi-cell__value--mono { font-family: 'IBM Plex Mono', monospace; }
+
+    .kpi-arrow {
+      position: absolute; width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; cursor: pointer; padding: 0;
+      transition: background 110ms; z-index: 2;
+    }
+    .kpi-arrow:hover { background: rgba(69,137,255,0.08); }
+    .kpi-arrow svg { fill: #0f62fe; }
+    .kpi-arrow--left-r1 { left: 43.26%; top: 60px; }
+    .kpi-arrow--left-r2 { left: 43.26%; top: 58px; }
+    .kpi-arrow--right-r1 { right: 0; top: 60px; }
+    .kpi-arrow--right-r2 { right: 0; top: 58px; }
+
+    /* ══════════════════════════════════════════════════════════════════
+       BOTTOM ROW
+    ══════════════════════════════════════════════════════════════════ */
+    .row-summary { display: flex; gap: 16px; height: 253px; margin-bottom: 0; }
+
+    /* Tile 1: Avg metric */
+    .summary-tile {
+      flex: 1; min-width: 0; background: #ffffff;
+      display: flex; flex-direction: column; height: 253px;
+      position: relative; border: 1px solid #c6c6c6; box-sizing: border-box;
+    }
+    .summary-tile__title { font-size: 16px; font-weight: 600; line-height: 22px; color: #161616; padding: 16px 16px 0 16px; }
+    .summary-tile__sub { font-size: 14px; font-weight: 400; line-height: 18px; letter-spacing: 0.16px; color: #161616; padding: 8px 16px 0 16px; }
+    .summary-tile__metric { position: absolute; top: 104px; left: 16px; right: 16px; }
+    .summary-tile__big { font-size: 28px; font-weight: 400; color: #161616; line-height: 36px; font-family: 'IBM Plex Sans', sans-serif; display: flex; align-items: baseline; gap: 2px; }
+    .summary-tile__big-unit { font-size: 14px; font-weight: 400; color: #525252; letter-spacing: 0.16px; }
+    .summary-tile__trend { font-size: 12px; font-weight: 400; color: #161616; line-height: 16px; letter-spacing: 0.32px; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+    .summary-tile__arrow-btn { position: absolute; top: 190px; right: 0; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; }
+    .summary-tile__arrow-btn:hover { background: rgba(69,137,255,0.08); }
+    .summary-tile__arrow-btn svg { fill: #0f62fe; }
+
+    /* Tile 1: MTTR split */
+    .mttr-split { display: flex; gap: 0; margin-top: 8px; }
+    .mttr-split__col { flex: 1; }
+    .mttr-split__col + .mttr-split__col { border-left: 1px solid #e0e0e0; padding-left: 12px; }
+    .mttr-split__label { font-size: 11px; color: #8d8d8d; letter-spacing: 0.32px; margin-bottom: 2px; }
+    .mttr-split__val { font-size: 20px; font-weight: 400; color: #161616; line-height: 1.2; font-family: 'IBM Plex Sans', sans-serif; }
+    .mttr-split__unit { font-size: 11px; color: #525252; }
+
+    /* Tile 2: Incident donut */
+    .closure-tile {
+      flex: 1; min-width: 0; background: #ffffff;
+      display: flex; flex-direction: column; height: 253px;
+      position: relative; border: 1px solid #c6c6c6; box-sizing: border-box;
+    }
+    .closure-tile__header { padding: 16px 16px 0 16px; height: 54px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: flex-start; gap: 8px; }
+    .closure-tile__title { font-size: 16px; font-weight: 600; line-height: 22px; color: #161616; }
+    .closure-tile__body { display: flex; flex: 1; padding: 12px 16px 8px; align-items: center; gap: 24px; }
+    .donut-wrap { position: relative; flex-shrink: 0; }
+    .donut-total { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); text-align: center; pointer-events: none; }
+    .donut-total__num { font-size: 22px; font-weight: 400; color: #161616; line-height: 1; font-family: 'IBM Plex Sans', sans-serif; }
+    .donut-total__label { font-size: 10px; color: #525252; margin-top: 2px; }
+    .donut-legend { display: flex; flex-direction: column; gap: 10px; }
+    .donut-legend__row { display: flex; align-items: center; gap: 8px; }
+    .donut-legend__dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .donut-legend__label { font-size: 12px; color: #525252; }
+    .donut-legend__val { font-size: 14px; font-weight: 500; color: #161616; margin-left: auto; }
+    .active-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; }
+    .active-badge--none { color: #24a148; }
+    .active-badge--p1   { color: #a2191f; }
+    .closure-tile__arrow-btn { position: absolute; bottom: 0; right: 0; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; }
+    .closure-tile__arrow-btn:hover { background: rgba(15,98,254,0.08); }
+    .closure-tile__arrow-btn svg { fill: #0f62fe; }
+    /* BVD-style split-column layout for closure tile */
+    .closure-tile__sub { font-size: 14px; font-weight: 400; line-height: 18px; letter-spacing: 0.16px; color: #161616; padding: 8px 16px 0 16px; height: 34px; box-sizing: border-box; }
+    .closure-slot { position: absolute; top: 112px; left: 16px; right: 16px; }
+    .closure-split { display: flex; align-items: flex-start; gap: 0; height: 52px; }
+    .closure-col--left  { width: 146.5px; flex-shrink: 0; }
+    .closure-col--right { width: 145.5px; flex-shrink: 0; }
+    .closure-divider { width: 1px; align-self: stretch; background: #c6c6c6; flex-shrink: 0; margin: 0 7.5px; }
+    .closure-label { font-size: 12px; font-weight: 400; line-height: 16px; letter-spacing: 0.32px; color: #525252; margin-bottom: 4px; }
+    .closure-value { font-size: 28px; font-weight: 400; line-height: 36px; color: #161616; font-family: 'IBM Plex Sans', sans-serif; }
+    .closure-value sup { font-size: 14px; color: #525252; font-weight: 400; vertical-align: super; }
+
+    /* Tile 3 & 4: Right panel — Account status + Contract health */
+    .account-top {
+      height: 165px; flex: 0 0 165px; background: #ffffff;
+      display: flex; flex-direction: column; padding: 0; overflow: hidden; position: relative;
+    }
+    .account-top__header { display: flex; align-items: center; gap: 8px; padding: 12px 16px 0 16px; flex-shrink: 0; }
+    .account-top__title { font-size: 16px; font-weight: 600; line-height: 22px; color: #161616; white-space: nowrap; }
+    .account-top__slot { padding: 6px 16px 0 16px; flex: 1; }
+    .acct-consumed-row { display: flex; align-items: baseline; gap: 0; margin-bottom: 6px; }
+    .acct-consumed-pct { font-size: 28px; font-weight: 400; line-height: 36px; color: #161616; font-family: 'IBM Plex Sans', sans-serif; }
+    .acct-consumed-sup { font-size: 14px; color: #525252; margin-right: 4px; align-self: flex-start; margin-top: 6px; }
+    .acct-consumed-label { font-size: 14px; color: #525252; line-height: 20px; }
+    .acct-progress-track { height: 16px; background: #c6c6c6; position: relative; margin-bottom: 4px; border-right: 1px solid #8d8d8d; }
+    .acct-progress-fill { height: 100%; background: #0f62fe; transition: width 300ms ease; }
+    .acct-progress-labels { display: flex; justify-content: space-between; font-size: 12px; color: #525252; letter-spacing: 0.32px; margin-bottom: 8px; }
+    .acct-stat-row { display: flex; border-top: 1px solid #e0e0e0; }
+    .acct-stat-col { flex: 1; padding: 8px 12px 4px; }
+    .acct-stat-col + .acct-stat-col { border-left: 1px solid #e0e0e0; }
+    .acct-stat-col:first-child { padding-left: 16px; }
+    .acct-stat__label { font-size: 11px; color: #525252; letter-spacing: 0.32px; line-height: 14px; margin-bottom: 2px; }
+    .acct-stat__value { font-size: 20px; font-weight: 400; color: #161616; line-height: 1.2; font-family: 'IBM Plex Sans', sans-serif; white-space: nowrap; }
+    .acct-stat__unit { font-size: 11px; color: #525252; font-family: 'IBM Plex Sans', sans-serif; }
+    .acct-stat__note { font-size: 11px; color: #525252; letter-spacing: 0.16px; margin-top: 1px; }
+    .account-bottom {
+      height: 88px; flex: 0 0 88px;
+      display: flex; flex-direction: column;
+      border-top: 1px solid #c6c6c6; background: #ffffff; overflow: hidden;
+      padding: 10px 16px;
+    }
+    .contract-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .contract-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .contract-dot--green { background: #24a148; }
+    .contract-dot--red   { background: #da1e28; }
+    .contract-state { font-size: 14px; font-weight: 600; color: #161616; }
+    .contract-detail { font-size: 12px; color: #525252; line-height: 16px; letter-spacing: 0.32px; }
+    .contract-cta {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 6px; font-size: 12px; color: #0f62fe;
+      background: transparent; border: none; cursor: pointer; padding: 0;
+      font-family: 'IBM Plex Sans', sans-serif; transition: color 110ms;
+    }
+    .contract-cta:hover { color: #0043ce; }
+    .contract-title { font-size: 14px; font-weight: 600; color: #161616; margin-bottom: 4px; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       ERROR RATE WIDGET — replaces avg-time-to-detect tile
+    ═══════════════════════════════════════════════════════════════ */
+    .error-rate-tile {
+      width: 236px; flex-shrink: 0; background: #ffffff;
+      display: flex; flex-direction: column; height: 253px;
+      position: relative; border: 1px solid #c6c6c6; box-sizing: border-box;
+      overflow: hidden;
+    }
+    .error-rate-tile__header {
+      padding: 12px 16px 0;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .error-rate-tile__title { font-size: 16px; font-weight: 600; line-height: 22px; color: #161616; }
+    .error-rate-tile__badge {
+      width: 20px; height: 20px; background: #0f62fe;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .error-rate-tile__badge-text {
+      font-size: 6px; font-weight: 700; color: #fff;
+      font-family: 'IBM Plex Sans', sans-serif; letter-spacing: -0.3px; line-height: 1;
+    }
+    .error-rate-tile__kpi {
+      padding: 4px 16px 0;
+      display: flex; align-items: baseline; gap: 4px; flex-shrink: 0;
+    }
+    .error-rate-tile__value { font-size: 28px; font-weight: 400; line-height: 36px; color: #da1e28; font-family: 'IBM Plex Sans', sans-serif; }
+    .error-rate-tile__unit  { font-size: 14px; font-weight: 400; color: #525252; }
+    .error-rate-tile__sub   { font-size: 12px; color: #525252; letter-spacing: 0.32px; padding: 0 16px; flex-shrink: 0; }
+    .error-rate-tile__chart { flex: 1; padding: 4px 10px 2px; min-height: 0; }
+    .error-rate-tile__arrow-btn {
+      position: absolute; bottom: 0; right: 0; width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; cursor: pointer;
+    }
+    .error-rate-tile__arrow-btn:hover { background: rgba(69,137,255,0.08); }
+    .error-rate-tile__arrow-btn svg { fill: #0f62fe; }
+
+    /* Slide-in animation for the replacement tile */
+    @keyframes tile-slide-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .tile-animate-in { animation: tile-slide-in 280ms cubic-bezier(0.2,0,0.38,0.9) both; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       OPERATIONAL KPI CARDS — host availability + impacted entities
+    ═══════════════════════════════════════════════════════════════ */
+    .kpi-card {
+      flex: 1; min-width: 0; background: #ffffff;
+      display: flex; flex-direction: column; height: 253px;
+      position: relative; border: 1px solid #c6c6c6; box-sizing: border-box;
+    }
+    .kpi-card__title  { font-size: 16px; font-weight: 600; line-height: 22px; color: #161616; padding: 16px 16px 0 16px; }
+    .kpi-card__sub    { font-size: 14px; font-weight: 400; line-height: 18px; letter-spacing: 0.16px; color: #161616; padding: 8px 16px 0 16px; }
+    .kpi-card__metric { position: absolute; top: 100px; left: 16px; right: 16px; }
+    .kpi-card__big    {
+      font-size: 28px; font-weight: 400; color: #161616; line-height: 36px;
+      font-family: 'IBM Plex Sans', sans-serif; display: flex; align-items: baseline; gap: 4px;
+    }
+    .kpi-card__big--success { color: #24a148; }
+    .kpi-card__big--warning { color: #f1c21b; }
+    .kpi-card__big--danger  { color: #da1e28; }
+    .kpi-card__unit   { font-size: 14px; font-weight: 400; color: #525252; letter-spacing: 0.16px; }
+    .kpi-card__detail { font-size: 12px; color: #525252; letter-spacing: 0.32px; margin-top: 4px; line-height: 16px; }
+    .kpi-card__detail--danger { color: #da1e28; }
+    .kpi-card__detail--neutral { color: #525252; }
+    .kpi-card__badge  {
+      position: absolute; top: 14px; right: 14px;
+      font-size: 10px; font-weight: 700; letter-spacing: 0.32px;
+      padding: 2px 6px; border-radius: 2px;
+    }
+    .kpi-card__badge--ok      { background: #defbe6; color: #0e6027; }
+    .kpi-card__badge--warn    { background: #fdf6dd; color: #8e6a00; }
+    .kpi-card__badge--crit    { background: #fff1f1; color: #a2191f; }
+    .kpi-card__arrow {
+      position: absolute; bottom: 0; right: 0; width: 48px; height: 48px;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; cursor: pointer;
+    }
+    .kpi-card__arrow:hover { background: rgba(69,137,255,0.08); }
+    .kpi-card__arrow svg { fill: #0f62fe; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       ACCOUNT SECTION DIVIDER
+    ═══════════════════════════════════════════════════════════════ */
+    .account-section {
+      margin-top: 16px;
+      display: flex; gap: 16px; height: 253px;
+    }
+    .account-section__label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #525252;
+      margin-bottom: 8px;
+    }
+    .account-section__group {
+      flex: 1; display: flex; flex-direction: column; min-width: 0;
+    }
+    .account-section__card {
+      flex: 1; border: 1px solid #c6c6c6; background: #ffffff;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       EXPORT & NOTIFICATIONS SIDE PANEL
+       480px right drawer — three tabs: Export once / Scheduled / Alerts
+    ═══════════════════════════════════════════════════════════════ */
+    .export-panel {
+      position: fixed;
+      top: 48px; right: 0; bottom: 0;
+      width: 480px;
+      background: #ffffff;
+      border-left: 1px solid #e0e0e0;
+      display: flex; flex-direction: column;
+      z-index: 8800;
+      transform: translateX(100%);
+      transition: transform 220ms cubic-bezier(0.2,0,0.38,0.9);
+      overflow: hidden;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    body.export-open .export-panel { transform: translateX(0); }
+    body.export-open .page-layout  { margin-right: 480px; }
+    body.export-open.trace-panel-open .page-layout { margin-right: 480px; }
+
+    .export-panel__header { padding: 16px 16px 14px; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
+    .export-panel__header-top { display: flex; align-items: flex-start; gap: 10px; }
+    .export-panel__title-block { flex: 1; min-width: 0; }
+    .export-panel__title  { font-size: 18px; font-weight: 600; color: #161616; line-height: 24px; }
+    .export-panel__subtitle { font-size: 12px; color: #525252; line-height: 18px; letter-spacing: 0.16px; margin-top: 2px; }
+    .export-panel__close {
+      width: 32px; height: 32px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; border: none; color: #525252;
+      cursor: pointer; transition: background 110ms; border-radius: 2px;
+    }
+    .export-panel__close:hover { background: #e8e8e8; color: #161616; }
+    .export-panel__close svg { fill: currentColor; display: block; }
+
+    .export-tabs { display: flex; border-bottom: 1px solid #e0e0e0; flex-shrink: 0; }
+    .export-tab {
+      flex: 1; height: 40px;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      font-size: 13px; color: #525252;
+      background: transparent; border: none; border-bottom: 2px solid transparent;
+      cursor: pointer; transition: color 110ms, border-color 110ms;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .export-tab:hover { background: #f4f4f4; color: #161616; }
+    .export-tab--active { color: #161616; font-weight: 500; border-bottom-color: #ff832b; }
+    .export-tab svg { fill: currentColor; flex-shrink: 0; }
+
+    .export-panel__body { flex: 1; overflow-y: auto; padding: 20px 16px 16px; }
+    .export-panel__body::-webkit-scrollbar { width: 4px; }
+    .export-panel__body::-webkit-scrollbar-track { background: transparent; }
+    .export-panel__body::-webkit-scrollbar-thumb { background: #c6c6c6; border-radius: 2px; }
+    .export-tab-body { display: none; }
+    .export-tab-body--visible { display: block; }
+
+    .export-section-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.64px; color: #6f6f6f;
+      margin-bottom: 10px; margin-top: 20px;
+    }
+    .export-section-label:first-child { margin-top: 0; }
+
+    .export-content-list { border: 1px solid #e0e0e0; border-radius: 2px; margin-bottom: 20px; }
+    .export-content-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-bottom: 1px solid #e0e0e0; cursor: pointer;
+    }
+    .export-content-item:last-child { border-bottom: none; }
+    .export-content-item:hover { background: #f4f4f4; }
+    .export-cb {
+      width: 16px; height: 16px; flex-shrink: 0;
+      border: 1px solid #6f6f6f; border-radius: 2px;
+      background: #fff; display: flex; align-items: center; justify-content: center;
+      transition: background 110ms, border-color 110ms;
+    }
+    .export-cb--checked { background: #ff832b; border-color: #ff832b; }
+    .export-cb svg { display: none; fill: #fff; }
+    .export-cb--checked svg { display: block; }
+    .export-content-item__label { font-size: 14px; color: #161616; }
+    .export-content-item__sub   { font-size: 12px; color: #6f6f6f; line-height: 16px; }
+
+    .export-format-row { display: flex; gap: 8px; margin-bottom: 20px; }
+    .export-format-btn {
+      flex: 1; height: 40px;
+      border: 1px solid #c6c6c6; border-radius: 2px;
+      background: #fff; color: #161616; font-size: 14px;
+      font-family: 'IBM Plex Sans', sans-serif;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      cursor: pointer; transition: background 110ms, border-color 110ms;
+    }
+    .export-format-btn:hover { background: #f4f4f4; border-color: #8d8d8d; }
+    .export-format-btn--active { border-color: #ff832b; border-width: 2px; color: #ff832b; font-weight: 600; }
+    .export-format-btn svg { fill: currentColor; }
+
+    .export-dest-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .export-dest-btn {
+      flex: 1; min-height: 56px;
+      border: 1px solid #c6c6c6; border-radius: 2px;
+      background: #fff; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 4px;
+      transition: background 110ms, border-color 110ms; padding: 8px 4px;
+    }
+    .export-dest-btn:hover { background: #f4f4f4; border-color: #8d8d8d; }
+    .export-dest-btn--active { border-color: #ff832b; border-width: 2px; background: #fff2e8; }
+    .export-dest-btn__label { font-size: 12px; font-weight: 500; color: #161616; }
+    .export-dest-btn--active .export-dest-btn__label { color: #ff832b; }
+
+    .export-input-row { margin-bottom: 12px; }
+    .export-input-label { font-size: 12px; font-weight: 600; color: #161616; margin-bottom: 4px; display: block; }
+    .export-input {
+      width: 100%; height: 40px;
+      border: 1px solid #8d8d8d; border-radius: 2px;
+      background: #fff; padding: 0 12px;
+      font-size: 14px; color: #161616;
+      font-family: 'IBM Plex Sans', sans-serif;
+      outline: none; transition: border-color 110ms;
+    }
+    .export-input:focus { border-color: #ff832b; border-width: 2px; }
+    .export-input::placeholder { color: #a8a8a8; }
+    .export-input-hint { font-size: 11px; color: #6f6f6f; margin-top: 4px; }
+
+    .export-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .export-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px 2px 10px; border-radius: 14px;
+      background: #e0e0e0; font-size: 12px; color: #161616;
+    }
+    .export-tag__remove {
+      width: 16px; height: 16px; border: none; background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; color: #525252; border-radius: 50%; padding: 0;
+    }
+    .export-tag__remove:hover { background: #c6c6c6; }
+    .export-tag__remove svg { fill: currentColor; display: block; }
+
+    .export-schedule-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .export-select-wrap { position: relative; }
+    .export-select {
+      width: 100%; height: 40px;
+      border: 1px solid #8d8d8d; border-radius: 2px;
+      background: #fff; padding: 0 36px 0 12px;
+      font-size: 14px; color: #161616;
+      font-family: 'IBM Plex Sans', sans-serif;
+      appearance: none; outline: none; cursor: pointer;
+    }
+    .export-select:focus { border-color: #ff832b; border-width: 2px; }
+    .export-select-wrap::after {
+      content: ''; position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      border-left: 4px solid transparent; border-right: 4px solid transparent;
+      border-top: 5px solid #525252; pointer-events: none;
+    }
+
+    .export-preview {
+      background: #f4f4f4; border: 1px solid #e0e0e0;
+      border-radius: 2px; padding: 14px; margin-bottom: 8px;
+    }
+    .export-preview__row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 4px 0; border-bottom: 1px solid #e0e0e0; font-size: 13px;
+    }
+    .export-preview__row:last-child { border-bottom: none; }
+    .export-preview__key { color: #6f6f6f; }
+    .export-preview__val { color: #161616; font-weight: 500; text-align: right; max-width: 220px; }
+
+    .export-toggle-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      background: #fff; border: 1px solid #e0e0e0; border-radius: 2px;
+      margin-bottom: 8px; cursor: pointer;
+    }
+    .export-toggle-row:hover { background: #f4f4f4; }
+    .export-toggle-label { flex: 1; font-size: 14px; color: #161616; }
+    .export-toggle-label span { display: block; font-size: 12px; color: #525252; margin-top: 2px; }
+    .export-toggle-track {
+      width: 36px; height: 20px; border-radius: 10px;
+      background: #8d8d8d; position: relative; transition: background 150ms; flex-shrink: 0;
+    }
+    .export-toggle-track--on { background: #ff832b; }
+    .export-toggle-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #fff; transition: transform 150ms;
+    }
+    .export-toggle-track--on .export-toggle-thumb { transform: translateX(16px); }
+
+    .export-alert-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    .export-alert-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 2px; cursor: pointer;
+      font-size: 13px; border: 1px solid transparent;
+      background: transparent; transition: all 110ms;
+      font-family: 'IBM Plex Sans', sans-serif;
+    }
+    .export-alert-chip__dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .export-alert-chip--critical { border-color: #da1e28; color: #da1e28; }
+    .export-alert-chip--high     { border-color: #ad6f00; color: #ad6f00; }
+    .export-alert-chip--warn     { border-color: #f1c21b; color: #a56400; }
+    .export-alert-chip--active.export-alert-chip--critical { background: #fff1f1; font-weight: 600; }
+    .export-alert-chip--active.export-alert-chip--high     { background: #fff8e1; font-weight: 600; }
+    .export-alert-chip--active.export-alert-chip--warn     { background: #fff8e1; font-weight: 600; }
+
+    .export-panel__footer {
+      border-top: 1px solid #e0e0e0; padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0; background: #fff;
+    }
+    .export-btn-primary {
+      flex: 1; height: 40px;
+      background: #ff832b; color: #fff;
+      border: none; border-radius: 2px;
+      font-size: 14px; font-weight: 600;
+      font-family: 'IBM Plex Sans', sans-serif;
+      cursor: pointer; transition: background 110ms;
+    }
+    .export-btn-primary:hover { background: #e06920; }
+    .export-btn-ghost {
+      height: 40px; padding: 0 16px;
+      background: #fff; color: #ff832b;
+      border: 1px solid #ff832b; border-radius: 2px;
+      font-size: 14px; font-family: 'IBM Plex Sans', sans-serif;
+      cursor: pointer; transition: background 110ms;
+    }
+    .export-btn-ghost:hover { background: #fff2e8; }
+
+    .export-toast {
+      position: fixed; top: 58px; right: 16px;
+      min-width: 280px; max-width: 340px;
+      background: #defbe6; border-left: 4px solid #24a148;
+      border-radius: 2px; padding: 12px 14px;
+      display: flex; align-items: flex-start; gap: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 9500;
+      opacity: 0; transform: translateY(-8px);
+      transition: opacity 200ms, transform 200ms; pointer-events: none;
+    }
+    .export-toast--visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .export-toast__icon { fill: #24a148; flex-shrink: 0; margin-top: 1px; }
+    .export-toast__title { font-size: 14px; font-weight: 600; color: #161616; }
+    .export-toast__body  { font-size: 12px; color: #525252; margin-top: 2px; }
+
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     SHELL HEADER
+══════════════════════════════════════════════════════════ -->
+<header class="shell-header" role="banner" aria-label="IBM Instana">
+  <div class="shell-header__brand">
+    <span class="shell-header__brand-ibm">IBM</span>
+    <span class="shell-header__brand-product">Instana</span>
+  </div>
+  <div class="shell-header__spacer"></div>
+  <div class="shell-header__actions">
+    <button id="demoToggleBtn" onclick="toggleScenario()" aria-label="Toggle scenario">SCENARIO A</button>
+    <button class="shell-header__action" aria-label="Share">
+      <svg width="20" height="20" viewBox="0 0 17 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M13.1407 11.2697C12.6729 11.272 12.2115 11.3794 11.7907 11.5838C11.3699 11.7883 11.0004 12.0846 10.7094 12.4509L6.14068 9.59466C6.30719 9.05726 6.30719 8.48206 6.14068 7.94466L10.7094 5.08841C11.1731 5.66261 11.8251 6.05414 12.5499 6.19366C13.2746 6.33318 14.0254 6.21168 14.6691 5.85068C15.3129 5.48967 15.8081 4.91247 16.067 4.22131C16.3259 3.53016 16.3319 2.76967 16.0838 2.07455C15.8357 1.37944 15.3496 0.794571 14.7115 0.423553C14.0735 0.0525344 13.3247 -0.0806849 12.5979 0.0474939C11.8711 0.175673 11.213 0.556976 10.7404 1.12386C10.2678 1.69074 10.011 2.40661 10.0157 3.14466C10.0186 3.42415 10.0607 3.70184 10.1407 3.96966L5.57193 6.82591C5.16858 6.31815 4.61727 5.94844 3.9944 5.76803C3.37153 5.58762 2.70797 5.60545 2.09569 5.81904C1.48341 6.03264 0.952735 6.43141 0.577233 6.9601C0.201732 7.48878 0 8.12119 0 8.76966C0 9.41813 0.201732 10.0505 0.577233 10.5792C0.952735 11.1079 1.48341 11.5067 2.09569 11.7203C2.70797 11.9339 3.37153 11.9517 3.9944 11.7713C4.61727 11.5909 5.16858 11.2212 5.57193 10.7134L10.1407 13.5697C10.0607 13.8375 10.0186 14.1152 10.0157 14.3947C10.0157 15.0127 10.199 15.6169 10.5423 16.1308C10.8857 16.6447 11.3738 17.0453 11.9448 17.2818C12.5158 17.5183 13.1441 17.5802 13.7503 17.4596C14.3565 17.339 14.9133 17.0414 15.3504 16.6044C15.7874 16.1673 16.0851 15.6105 16.2056 15.0043C16.3262 14.3981 16.2643 13.7698 16.0278 13.1988C15.7913 12.6278 15.3907 12.1397 14.8768 11.7963C14.3629 11.4529 13.7587 11.2697 13.1407 11.2697ZM13.1407 1.26966C13.5115 1.26966 13.874 1.37963 14.1824 1.58565C14.4907 1.79168 14.731 2.08452 14.873 2.42713C15.0149 2.76974 15.052 3.14674 14.9797 3.51045C14.9073 3.87417 14.7287 4.20826 14.4665 4.47048C14.2043 4.73271 13.8702 4.91128 13.5065 4.98363C13.1428 5.05598 12.7658 5.01885 12.4231 4.87693C12.0805 4.73502 11.7877 4.4947 11.5817 4.18635C11.3756 3.87801 11.2657 3.5155 11.2657 3.14466C11.2657 2.64738 11.4632 2.17046 11.8149 1.81883C12.1665 1.4672 12.6434 1.26966 13.1407 1.26966ZM3.14068 10.6447C2.76984 10.6447 2.40733 10.5347 2.09898 10.3287C1.79064 10.1226 1.55032 9.8298 1.4084 9.48719C1.26649 9.14458 1.22936 8.76758 1.30171 8.40386C1.37405 8.04015 1.55263 7.70606 1.81485 7.44383C2.07708 7.18161 2.41117 7.00303 2.77488 6.93069C3.1386 6.85834 3.5156 6.89547 3.85821 7.03738C4.20082 7.1793 4.49366 7.41962 4.69968 7.72797C4.90571 8.03631 5.01568 8.39882 5.01568 8.76966C5.01568 9.26694 4.81814 9.74385 4.4665 10.0955C4.11487 10.4471 3.63796 10.6447 3.14068 10.6447ZM13.1407 16.2697C12.7698 16.2697 12.4073 16.1597 12.099 15.9537C11.7906 15.7476 11.5503 15.4548 11.4084 15.1122C11.2665 14.7696 11.2294 14.3926 11.3017 14.0289C11.3741 13.6652 11.5526 13.3311 11.8149 13.0688C12.0771 12.8066 12.4112 12.628 12.7749 12.5557C13.1386 12.4833 13.5156 12.5205 13.8582 12.6624C14.2008 12.8043 14.4937 13.0446 14.6997 13.353C14.9057 13.6613 15.0157 14.0238 15.0157 14.3947C15.0157 14.8919 14.8181 15.3689 14.4665 15.7205C14.1149 16.0721 13.638 16.2697 13.1407 16.2697Z" fill="#f4f4f4"/></svg>
+    </button>
+    <button class="shell-header__action" aria-label="Help">
+      <svg width="20" height="20" viewBox="0 0 32 32"><path d="M16 2a14 14 0 1014 14A14 14 0 0016 2zm0 26a12 12 0 1112-12 12 12 0 01-12 12zm-1-17h2v2h-2zm0 4h2v8h-2z"/></svg>
+    </button>
+    <div class="persona-switcher" id="personaSwitcher">
+      <button class="persona-switcher__btn" id="personaBtn"
+        aria-label="Switch persona" aria-haspopup="true" aria-expanded="false"
+        onclick="togglePersonaMenu(event)">
+        <svg width="20" height="20" viewBox="0 0 32 32"><path d="M16 4a5 5 0 11-5 5 5 5 0 015-5m0-2a7 7 0 107 7 7 7 0 00-7-7zM26 30h-2v-5a5 5 0 00-5-5h-6a5 5 0 00-5 5v5H6v-5a7 7 0 017-7h6a7 7 0 017 7z"/></svg>
+      </button>
+      <div class="persona-dropdown" id="personaMenu" role="menu" aria-hidden="true">
+        <div class="persona-dropdown__label">Switch dashboard</div>
+        <a class="persona-dropdown__item" role="menuitem" href="instana-bvd-dashboard.html" data-persona="shani">
+          <div class="persona-dropdown__avatar" style="background:#a56eff">S</div>
+          <span class="persona-dropdown__name">Shani — Executive</span>
+          <svg class="persona-dropdown__check" viewBox="0 0 32 32"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9z"/></svg>
+        </a>
+        <a class="persona-dropdown__item" role="menuitem" href="instana-carlos-dashboard.html" data-persona="carlos">
+          <div class="persona-dropdown__avatar" style="background:#4589ff">C</div>
+          <span class="persona-dropdown__name">Carlos — SRE</span>
+          <svg class="persona-dropdown__check" viewBox="0 0 32 32"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9z"/></svg>
+        </a>
+        <a class="persona-dropdown__item" role="menuitem" href="instana-rj-dashboard.html" data-persona="rj">
+          <div class="persona-dropdown__avatar" style="background:#ff832b">R</div>
+          <span class="persona-dropdown__name">RJ — DevOps</span>
+          <svg class="persona-dropdown__check" viewBox="0 0 32 32"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9z"/></svg>
+        </a>
+        <a class="persona-dropdown__item" role="menuitem" href="#" data-persona="unknown">
+          <div class="persona-dropdown__avatar" style="background:#6f6f6f">?</div>
+          <span class="persona-dropdown__name">Unknown user</span>
+          <svg class="persona-dropdown__check" viewBox="0 0 32 32"><path d="M13 24L4 15l1.41-1.41L13 21.17 26.59 7.59 28 9z"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
+<!-- ══════════════════════════════════════════════════════════
+     SIDE NAV
+══════════════════════════════════════════════════════════ -->
+<nav class="shell-sidenav" role="navigation" aria-label="Side navigation">
+
+  <!-- ── Group 1: primary nav (6 icons) ── -->
+  <div class="sidenav-group">
+
+    <!-- 1. Home — filled house with chimney, door cutout — active state -->
+    <button class="sidenav-item sidenav-item--active" aria-label="Home" aria-current="page">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M10 2.5L2 8.5V17.5H7.5V12.5H12.5V17.5H18V8.5L10 2.5Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" fill="none"/>
+        <path d="M7.5 17.5V12.5H12.5V17.5" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </button>
+
+    <!-- 2. Infrastructure tree — two rows of boxes connected vertically -->
+    <button class="sidenav-item" aria-label="Summary">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="7" y="2" width="6" height="4" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <line x1="10" y1="6" x2="10" y2="8.5" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="4.5" y1="8.5" x2="15.5" y2="8.5" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="4.5" y1="8.5" x2="4.5" y2="10" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="10" y1="8.5" x2="10" y2="10" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="15.5" y1="8.5" x2="15.5" y2="10" stroke="currentColor" stroke-width="1.1"/>
+        <rect x="2" y="10" width="5" height="4" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <rect x="7.5" y="10" width="5" height="4" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <rect x="13" y="10" width="5" height="4" stroke="currentColor" stroke-width="1.1" fill="none"/>
+      </svg>
+    </button>
+
+    <!-- 3. Layers / stack — three overlapping parallelogram layers -->
+    <button class="sidenav-item" aria-label="Events">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M10 2L18 6L10 10L2 6Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" fill="none"/>
+        <path d="M2 10L10 14L18 10" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" fill="none"/>
+        <path d="M2 14L10 18L18 14" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </button>
+
+    <!-- 4. Monitor / laptop — screen with base stand -->
+    <button class="sidenav-item" aria-label="Applications">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="2" y="3" width="16" height="11" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <line x1="7" y1="17" x2="13" y2="17" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        <line x1="10" y1="14" x2="10" y2="17" stroke="currentColor" stroke-width="1.1"/>
+      </svg>
+    </button>
+
+    <!-- 5. Pulse / waveform — ECG line -->
+    <button class="sidenav-item" aria-label="Infrastructure">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <polyline points="1,10 5,10 7,4 9,16 11,7 13,13 15,10 19,10" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+      </svg>
+    </button>
+
+    <!-- 6. People — two figures side by side -->
+    <button class="sidenav-item" aria-label="Metrics">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="7.5" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <path d="M2 17.5C2 14.5 4.5 12 7.5 12S13 14.5 13 17.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+        <circle cx="14" cy="5.5" r="2" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <path d="M13 12.2C13.6 12.1 14.3 12 14 12C16.8 12 19 14.3 19 17.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+      </svg>
+    </button>
+
+  </div>
+
+  <!-- ── Separator + Group 2 ── -->
+  <div class="sidenav-sep"></div>
+  <div class="sidenav-group">
+
+    <!-- 7. Line chart with axis — rising chart -->
+    <button class="sidenav-item" aria-label="Analytics">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <polyline points="3,15 7,9 10,12 14,6 17,8" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+        <line x1="2" y1="2" x2="2" y2="17" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+        <line x1="2" y1="17" x2="18" y2="17" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <!-- 8. Alert / warning circle -->
+    <button class="sidenav-item" aria-label="Teams">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <line x1="10" y1="5.5" x2="10" y2="11.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        <circle cx="10" cy="14" r="0.85" fill="currentColor"/>
+      </svg>
+    </button>
+
+    <!-- 9. Service graph — connected rounded rectangles -->
+    <button class="sidenav-item" aria-label="Infrastructure map">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="1.5" y="7.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <rect x="7.5" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <rect x="7.5" y="13" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <rect x="13.5" y="7.5" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <line x1="6.5" y1="10" x2="7.5" y2="10" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="10" y1="7" x2="10" y2="7.5" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="10" y1="13" x2="10" y2="12.5" stroke="currentColor" stroke-width="1.1"/>
+        <line x1="13.5" y1="10" x2="12.5" y2="10" stroke="currentColor" stroke-width="1.1"/>
+      </svg>
+    </button>
+
+    <!-- 10. SLOs — target / bullseye -->
+    <button class="sidenav-item" aria-label="SLOs">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <circle cx="10" cy="10" r="5" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <circle cx="10" cy="10" r="2" stroke="currentColor" stroke-width="1.1" fill="none"/>
+      </svg>
+    </button>
+
+  </div>
+
+  <!-- ── Separator + Group 3 ── -->
+  <div class="sidenav-sep"></div>
+  <div class="sidenav-group">
+
+    <!-- 11. Settings — gear with inner circle -->
+    <button class="sidenav-item" aria-label="Settings">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M10 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <path d="M16.2 10c0-.2 0-.4-.02-.6l1.58-1.24-1.5-2.6-1.94.78a6.1 6.1 0 0 0-1.04-.6L13 3.75h-3l-.28 2a6.1 6.1 0 0 0-1.04.6l-1.94-.78-1.5 2.6L6.82 9.4C6.8 9.6 6.8 9.8 6.8 10s0 .4.02.6L5.24 11.84l1.5 2.6 1.94-.78c.32.22.67.43 1.04.6L10 16.25h3l.28-2c.37-.17.72-.38 1.04-.6l1.94.78 1.5-2.6L16.18 10.6c.02-.2.02-.4.02-.6Z" stroke="currentColor" stroke-width="1.1" fill="none"/>
+      </svg>
+    </button>
+
+    <!-- 12. Lock — padlock outline -->
+    <button class="sidenav-item" aria-label="Security">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="4" y="9" width="12" height="9" rx="1" stroke="currentColor" stroke-width="1.1" fill="none"/>
+        <path d="M7 9V6.5a3 3 0 0 1 6 0V9" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+        <circle cx="10" cy="13.5" r="1" fill="currentColor"/>
+      </svg>
+    </button>
+
+  </div>
+
+  <!-- ── Bottom icon — spacer pushes to bottom ── -->
+  <div style="flex:1"></div>
+  <div class="sidenav-sep"></div>
+
+  <!-- 13. Help — question mark in circle -->
+  <button class="sidenav-item" aria-label="Help and documentation">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.1" fill="none"/>
+      <path d="M7.5 7.5a2.5 2.5 0 0 1 5 0c0 1.5-2.5 2-2.5 3.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" fill="none"/>
+      <circle cx="10" cy="14.5" r="0.85" fill="currentColor"/>
+    </svg>
+  </button>
+
+</nav>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN PAGE
+══════════════════════════════════════════════════════════ -->
+<main class="page-layout" id="main-content">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="page-header__title-row">
+      <h1 class="page-header__title">Welcome to Instana, <strong>RJ!</strong></h1>
+      <div class="period-selector" role="group" aria-label="Date range controls">
+        <button class="period-selector__date" aria-label="Change date range">
+          <span class="period-selector__date-label">Sept 10</span>
+          <span class="period-selector__date-range">
+            Last 30 days
+            <svg width="16" height="16" viewBox="0 0 32 32"><path d="M16 22L6 12l1.41-1.41L16 19.17l8.59-8.58L26 12z" fill="#161616"/></svg>
+          </span>
+        </button>
+        <button class="period-selector__live" aria-label="Live mode">
+          <span class="live-dot" aria-hidden="true"></span>
+          Live <span class="plus">+</span>
+        </button>
+      </div>
+    </div>
+    <nav class="page-tabs" role="tablist" aria-label="Dashboard views">
+      <button class="page-tab page-tab--active" role="tab" aria-selected="true">Your dashboard</button>
+    </nav>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <div class="filter-bar__spacer"></div>
+    <div class="filter-bar__divider"></div>
+    <button class="filter-btn filter-btn--ghost" aria-label="Environment">
+      Environment
+      <svg width="16" height="16" viewBox="0 0 32 32"><path d="M16 22L6 12l1.41-1.41L16 19.17l8.59-8.58L26 12z"/></svg>
+    </button>
+    <div class="filter-bar__divider"></div>
+    <button class="filter-btn filter-btn--ghost" aria-label="Export" aria-expanded="false" aria-controls="exportPanel" onclick="toggleExportPanel()">
+      Export
+      <svg width="16" height="16" viewBox="0 0 32 32"><path d="M16 22L6 12l1.41-1.41L16 19.17l8.59-8.58L26 12z"/></svg>
+    </button>
+    <button class="view-btn--ai" id="aiChatToggle" aria-label="Open AI assistant" aria-expanded="false" aria-controls="chatPanel" onclick="toggleChat()">
+      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g clip-path="url(#clip0_ai_rj)">
+          <rect width="40" height="40" fill="#0F62FE"/>
+          <g clip-path="url(#clip1_ai_rj)">
+            <path d="M19.5 21.5L18.793 22.2071L20.5859 24H14V17.5H13V24C13 24.5523 13.4477 25 14 25H20.5859L18.793 26.7929L19.5001 27.5L22.5 24.5L19.5 21.5Z" fill="white"/>
+            <path d="M24 21V20H25V14H24V13H27V14H26V20H27V21H24Z" fill="white"/>
+            <path d="M22.5 21H23.5L20.75 13L19.25 13.0044L16.5 21H17.5L18.1666 19H21.8334L22.5 21ZM18.5 18L20 13.5L21.5 18H18.5Z" fill="white"/>
+          </g>
+        </g>
+        <defs>
+          <clipPath id="clip0_ai_rj"><rect width="40" height="40" fill="white"/></clipPath>
+          <clipPath id="clip1_ai_rj"><rect width="16" height="16" fill="white" transform="translate(12 12)"/></clipPath>
+        </defs>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Dashboard Canvas -->
+  <div class="dashboard-canvas">
+
+    <!-- ── AI Summary + KPI grid ── -->
+    <div class="summary-and-kpi" role="region" aria-label="DevOps summary">
+
+      <!-- LEFT: AI card -->
+      <div class="summary-and-kpi__left ai-left" role="region" aria-label="AI DevOps summary" id="ai-card">
+
+        <div class="ai-left__inner-glow" aria-hidden="true"></div>
+
+        <!-- STATE A — All clear (default) -->
+        <div id="state-a">
+          <div class="ai-left__header">
+            <div class="ai-left__title-wrapper">
+              <span class="ai-left__title">All clear</span>
+              <span class="tag--green" role="status">Healthy</span>
+            </div>
+            <div class="ai-left__icons" aria-label="AI generated content">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AI">
+                <rect x="0.5" y="0.5" width="15" height="15" stroke="#161616"/>
+                <path d="M8.93273 11H7.69973L7.19573 9.398H4.96373L4.46873 11H3.26273L5.36873 4.718H6.84473L8.93273 11ZM6.90773 8.381L6.09773 5.798H6.05273L5.25173 8.381H6.90773ZM12.4506 11H9.59761V10.046H10.4256V5.672H9.59761V4.718H12.4506V5.672H11.6136V10.046H12.4506V11Z" fill="#161616"/>
+              </svg>
+            </div>
+          </div>
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">6 auto-remediation actions completed</div>
+              <div class="ai-insight__value">All resolved. No escalation required.</div>
+            </div>
+            <div class="ai-insight__btn">
+              <button class="ai-insight__ghost-btn" aria-label="View remediation actions">
+                View actions
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">Last deploy clean · cart-api v2.4.1</div>
+              <div class="ai-insight__value">Deployed 2h ago. Error rate unchanged.</div>
+            </div>
+          </div>
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">2 pods restarting — payments namespace</div>
+              <div class="ai-insight__value">Within restart budget. No action needed.</div>
+            </div>
+            <div class="ai-insight__btn">
+              <button class="ai-insight__ghost-btn" aria-label="View pod details">
+                View pods
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATE B — Action required (hidden by default) -->
+        <div id="state-b" style="display:none">
+          <div class="ai-left__header">
+            <div class="ai-left__title-wrapper">
+              <span class="ai-left__title">Needs your attention</span>
+              <span class="tag--blue" role="status">P1 Active</span>
+            </div>
+            <div class="ai-left__icons" aria-label="AI generated content">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="AI">
+                <rect x="0.5" y="0.5" width="15" height="15" stroke="#161616"/>
+                <path d="M8.93273 11H7.69973L7.19573 9.398H4.96373L4.46873 11H3.26273L5.36873 4.718H6.84473L8.93273 11ZM6.90773 8.381L6.09773 5.798H6.05273L5.25173 8.381H6.90773ZM12.4506 11H9.59761V10.046H10.4256V5.672H9.59761V4.718H12.4506V5.672H11.6136V10.046H12.4506V11Z" fill="#161616"/>
+              </svg>
+            </div>
+          </div>
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">18 pods crash-looping — payments-prod</div>
+              <div class="ai-insight__value">DB connection pool 99% · Auto-scale +5 replicas running</div>
+            </div>
+            <div class="ai-insight__btn">
+              <button class="ai-insight__ghost-btn" aria-label="View pod details"
+                      data-panel="openTrace" onclick="openPanel(this.dataset.panel)">
+                View pods
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">Deploy #482 correlated — rollback window open</div>
+              <div class="ai-insight__value">Pool ceiling not raised · Roll back if no improvement in 3 min</div>
+            </div>
+            <div class="ai-insight__btn">
+              <button class="ai-insight__ghost-btn" aria-label="Prepare rollback of Deploy #482"
+                      data-panel="openTrace" onclick="openPanel(this.dataset.panel)">
+                Prepare rollback
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="ai-insight">
+            <div class="ai-insight__slot">
+              <div class="ai-insight__label">worker-04 CPU at 96% — scheduler placement risk</div>
+              <div class="ai-insight__value">New replicas must NOT land on worker-04</div>
+            </div>
+            <div class="ai-insight__btn">
+              <button class="ai-insight__ghost-btn" aria-label="View host details"
+                      data-panel="openTrace" onclick="openPanel(this.dataset.panel)">
+                View hosts
+                <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /ai-left -->
+
+      <!-- RIGHT: AI strip + KPI grid -->
+      <div class="summary-and-kpi__right">
+
+        <!-- AI big message -->
+        <div class="kpi-right-ai" role="region" aria-label="AI DevOps summary statement">
+          <p class="kpi-right-ai__meta" id="ai-summary-meta">10 Sept 2026 · 47 hosts · 12 services</p>
+          <p class="kpi-right-ai__text" id="ai-summary-text">Last deploy clean, all remediation automated. No manual action from you.</p>
+          <div class="kpi-right-ai__badge" role="img" aria-label="AI generated">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <rect x="0.5" y="0.5" width="15" height="15" stroke="#161616"/>
+              <path d="M8.93273 11H7.69973L7.19573 9.398H4.96373L4.46873 11H3.26273L5.36873 4.718H6.84473L8.93273 11ZM6.90773 8.381L6.09773 5.798H6.05273L5.25173 8.381H6.90773ZM12.4506 11H9.59761V10.046H10.4256V5.672H9.59761V4.718H12.4506V5.672H11.6136V10.046H12.4506V11Z" fill="#161616"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- KPI 2×2 Grid -->
+        <div class="kpi-2x2" role="region" aria-label="Key DevOps metrics">
+
+          <!-- Row 1 -->
+          <div class="kpi-row kpi-row--1">
+            <div class="kpi-cell">
+              <div class="kpi-cell__label">Active alerts by severity</div>
+              <div class="kpi-cell__value-wrap">
+                <span class="kpi-cell__value" id="kpi-alerts-value">3</span>
+                <span class="kpi-cell__unit" id="kpi-alerts-unit">Critical</span>
+              </div>
+              <div class="kpi-cell__subtitle-wrap">
+                <span class="kpi-cell__helper" id="kpi-alerts-helper">1 P1 · 2 P2 · 0 P3</span>
+              </div>
+            </div>
+            <div class="kpi-cell kpi-cell--right">
+              <div class="kpi-cell__label">Post-deploy error delta</div>
+              <div class="kpi-cell__value-wrap">
+                <span class="kpi-cell__value" id="kpi-deploy-value">+0.2</span>
+                <span class="kpi-cell__unit" id="kpi-deploy-unit">%</span>
+              </div>
+              <div class="kpi-cell__subtitle-wrap">
+                <span class="kpi-cell__helper" id="kpi-deploy-helper">Last deploy 2h ago · within threshold</span>
+              </div>
+            </div>
+            <button class="kpi-arrow kpi-arrow--left-r1" aria-label="View active alerts">
+              <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+            </button>
+            <button class="kpi-arrow kpi-arrow--right-r1" aria-label="View deploy error delta">
+              <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+            </button>
+          </div>
+
+          <!-- Row 2 -->
+          <div class="kpi-row kpi-row--2">
+            <div class="kpi-cell">
+              <div class="kpi-cell__label">Pod restart count (K8s)</div>
+              <div class="kpi-cell__value-wrap">
+                <span class="kpi-cell__value kpi-cell__value--mono" id="kpi-pods-value">7</span>
+              </div>
+              <div class="kpi-cell__subtitle-wrap">
+                <span class="kpi-cell__helper" id="kpi-pods-helper">Rolling 1h · 2 namespaces affected</span>
+              </div>
+            </div>
+            <div class="kpi-cell kpi-cell--right">
+              <div class="kpi-cell__label">Automated remediation status</div>
+              <div class="kpi-cell__value-wrap">
+                <span class="kpi-cell__value" id="kpi-remediation-value">6</span>
+                <span class="kpi-cell__unit" id="kpi-remediation-unit">running</span>
+              </div>
+              <div class="kpi-cell__subtitle-wrap">
+                <span class="kpi-cell__helper" id="kpi-remediation-helper">6 / 6 actions successful</span>
+              </div>
+            </div>
+            <button class="kpi-arrow kpi-arrow--left-r2" aria-label="View pod restart details">
+              <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+            </button>
+            <button class="kpi-arrow kpi-arrow--right-r2" aria-label="View remediation status details">
+              <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+            </button>
+          </div>
+
+        </div><!-- /kpi-2x2 -->
+      </div><!-- /right -->
+    </div><!-- /summary-and-kpi -->
+
+    <!-- ══════════════════════════════════════════════════════════
+         OPERATIONAL KPI CARDS ROW
+    ══════════════════════════════════════════════════════════ -->
+    <div class="row-summary" role="region" aria-label="DevOps operational summary">
+
+      <!-- Tile 1: MTTR -->
+      <div class="summary-tile" id="tile-avg-detect">
+        <div class="summary-tile__title">Avg time to resolve</div>
+        <div class="summary-tile__sub" id="tile-mttr-sub">Detected in 4.2 min avg</div>
+        <div class="summary-tile__metric">
+          <div class="summary-tile__big" id="tile-mttr-big">
+            2.4<span class="summary-tile__big-unit">mins</span>
+          </div>
+          <div class="summary-tile__trend" id="tile-mttr-trend">
+            <svg width="12" height="12" viewBox="0 0 32 32" aria-hidden="true"><path d="M15 4v20.17l-5.59-5.58L8 20l8 8 8-8-1.41-1.41L17 24.17V4h-2z" fill="#161616"/></svg>
+            18% vs last period
+          </div>
+        </div>
+        <button class="summary-tile__arrow-btn" aria-label="View avg time to resolve details">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z" fill="#0f62fe"/></svg>
+        </button>
+      </div>
+
+      <!-- Tile 2: Incident closure breakdown -->
+      <div class="closure-tile">
+        <div class="closure-tile__header">
+          <div class="closure-tile__title">Incident closure breakdown</div>
+        </div>
+        <p class="closure-tile__sub" id="closure-sub-text">257 total incidents. 0 active</p>
+        <div class="closure-slot">
+          <div class="closure-split">
+            <div class="closure-col--left">
+              <div class="closure-label">Auto closed</div>
+              <div class="closure-value" id="closure-auto-val">83<sup>%</sup></div>
+            </div>
+            <div class="closure-divider" aria-hidden="true"></div>
+            <div class="closure-col--right">
+              <div class="closure-label">Manually closed</div>
+              <div class="closure-value" id="closure-manual-val">17<sup>%</sup></div>
+            </div>
+          </div>
+        </div>
+        <button class="closure-tile__arrow-btn" aria-label="View incident closure breakdown details">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z" fill="#0f62fe"/></svg>
+        </button>
+      </div>
+
+      <!-- Tile 3: Host / pod availability -->
+      <div class="kpi-card" role="region" aria-label="Host and pod availability">
+        <div class="kpi-card__title">Host / pod availability</div>
+        <div class="kpi-card__sub" id="kpi-avail-sub">47 hosts · 12 services monitored</div>
+        <span class="kpi-card__badge kpi-card__badge--ok" id="kpi-avail-badge">Healthy</span>
+        <div class="kpi-card__metric">
+          <div class="kpi-card__big">
+            <span id="kpi-avail-value" class="kpi-card__big--success">94</span>
+            <span class="kpi-card__unit" id="kpi-avail-unit">% healthy</span>
+          </div>
+          <div class="kpi-card__detail" id="kpi-avail-detail">44 / 47 hosts · 3 in warning state</div>
+        </div>
+        <button class="kpi-card__arrow" aria-label="View infrastructure health">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+        </button>
+      </div>
+
+      <!-- Tile 4: Impacted entity count -->
+      <div class="kpi-card" role="region" aria-label="Impacted entity count">
+        <div class="kpi-card__title">Impacted entities</div>
+        <div class="kpi-card__sub" id="kpi-impact-sub">Services · hosts · namespaces</div>
+        <span class="kpi-card__badge kpi-card__badge--ok" id="kpi-impact-badge">All clear</span>
+        <div class="kpi-card__metric">
+          <div class="kpi-card__big">
+            <span id="kpi-impact-value">0</span>
+            <span class="kpi-card__unit" id="kpi-impact-unit">degraded</span>
+          </div>
+          <div class="kpi-card__detail" id="kpi-impact-detail">No degraded services or hosts</div>
+        </div>
+        <button class="kpi-card__arrow" aria-label="View impacted entities">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z"/></svg>
+        </button>
+      </div>
+
+    </div><!-- /row-summary -->
+
+  </div><!-- /dashboard-canvas -->
+</main>
+
+<!-- ══════════════════════════════════════════════════════════
+     AI CHAT PANEL
+══════════════════════════════════════════════════════════ -->
+<aside class="chat-panel" id="chatPanel" aria-label="AI assistant" aria-hidden="true">
+
+  <!-- Panel header — "AI Chat" title, outlined AI badge, refresh + close icons -->
+  <div class="chat-panel__header">
+    <span class="chat-panel__header-title">AI Chat</span>
+    <div class="chat-panel__header-ai" aria-hidden="true">
+      <span class="chat-panel__header-ai-text">AI</span>
+    </div>
+    <button class="chat-panel__header-action" aria-label="Restart conversation" onclick="restartChat()">
+      <svg width="12" height="15" viewBox="0 0 12 15" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M11 8.5C11 9.48891 10.7068 10.4556 10.1574 11.2779C9.60794 12.1001 8.82705 12.741 7.91342 13.1194C6.99979 13.4978 5.99446 13.5969 5.02455 13.4039C4.05465 13.211 3.16373 12.7348 2.46447 12.0355C1.76521 11.3363 1.289 10.4454 1.09608 9.47545C0.90315 8.50555 1.00217 7.50021 1.38061 6.58658C1.75904 5.67295 2.39991 4.89206 3.22215 4.34265C4.0444 3.79324 5.0111 3.5 6 3.5H9.09105L7.29885 5.2927L8 6L11 3L8 0L7.29885 0.707L9.09255 2.5H6C4.81331 2.5 3.65328 2.85189 2.66658 3.51118C1.67989 4.17047 0.910851 5.10754 0.456726 6.2039C0.00259972 7.30026 -0.11622 8.50666 0.115291 9.67054C0.346802 10.8344 0.918247 11.9035 1.75736 12.7426C2.59648 13.5818 3.66558 14.1532 4.82946 14.3847C5.99335 14.6162 7.19975 14.4974 8.2961 14.0433C9.39246 13.5892 10.3295 12.8201 10.9888 11.8334C11.6481 10.8467 12 9.68669 12 8.5H11Z" fill="#161616"/></svg>
+    </button>
+    <button class="chat-panel__header-close" aria-label="Close AI assistant" onclick="toggleChat()">
+      <svg width="14" height="12" viewBox="0 0 14 12" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><path d="M13 0H1C0.45 0 0 0.45 0 1V11C0 11.55 0.45 12 1 12H13C13.55 12 14 11.55 14 11V1C14 0.45 13.55 0 13 0ZM4 11H1V1H4V11ZM13 11H5V6.5H10.1L8.3 8.3L9 9L12 6L9 3L8.3 3.7L10.1 5.5H5V1H13V11Z" fill="#161616"/></svg>
+    </button>
+  </div>
+
+  <!-- Messages area -->
+  <div class="chat-panel__messages" id="chatMessages" role="log" aria-live="polite" aria-label="Conversation">
+
+    <!-- Welcome message — watsonx avatar + headings + suggestion pills -->
+    <div class="chat-welcome">
+      <!-- Watsonx orbital avatar + sender name + timestamp -->
+      <div class="chat-welcome__avatar-row">
+        <!-- Watsonx orbital SVG logo -->
+        <svg class="chat-welcome__wx-avatar" viewBox="0 0 32 32" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="16" cy="16" r="15" stroke="#a56eff" stroke-width="1.5" fill="none"/>
+          <ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none"/>
+          <ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none" transform="rotate(60 16 16)"/>
+          <ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none" transform="rotate(120 16 16)"/>
+          <circle cx="16" cy="16" r="2.5" fill="#4589ff"/>
+          <circle cx="16" cy="1" r="2" fill="#a56eff"/>
+          <circle cx="28.99" cy="8.5" r="2" fill="#4589ff"/>
+          <circle cx="3.01" cy="8.5" r="2" fill="#4589ff"/>
+        </svg>
+        <span>watsonx</span>
+      </div>
+      <p class="chat-welcome__heading">Hello, RJ</p>
+      <p class="chat-welcome__sub">Environment is healthy. What do you want to check?</p>
+    </div>
+
+    <!-- Date divider -->
+    <div class="chat-date-divider"><span>Today</span></div>
+
+    <!-- Suggestions -->
+    <div class="chat-suggestions" id="chatSuggestions" role="group" aria-label="Suggested questions">
+      <button class="chat-suggestion" onclick="sendSuggestion(this)">Why did SLO breach at 02:14?</button>
+      <button class="chat-suggestion" onclick="sendSuggestion(this)">Show me payment latency trend</button>
+      <button class="chat-suggestion" onclick="sendSuggestion(this)">What caused checkout-service errors?</button>
+      <button class="chat-suggestion" onclick="sendSuggestion(this)">Summarise last 24h incidents</button>
+      <button class="chat-suggestion" onclick="sendSuggestion(this)" data-widget="error-rate-sparkline">Add service error rate widget</button>
+    </div>
+    <!-- State A suggestion texts stored for restore -->
+    <script>
+      var _suggA = [
+        'Why did SLO breach at 02:14?',
+        'Show me payment latency trend',
+        'What caused checkout-service errors?',
+        'Summarise last 24h incidents',
+        'Add service error rate widget'
+      ];
+      var _suggAWidgets = ['', '', '', '', 'error-rate-sparkline'];
+      var _suggB = [
+        'Why are 18 pods crash-looping?',
+        'Should I roll back Deploy #482?',
+        'Where will the 5 new replicas land?',
+        "What's the blast radius?"
+      ];
+    </script>
+
+  </div><!-- /chat-panel__messages -->
+
+  <!-- Footer -->
+  <div class="chat-panel__footer">
+    <div class="chat-panel__input-row">
+      <div class="chat-panel__input-wrap">
+        <textarea
+          class="chat-panel__input"
+          id="chatInput"
+          placeholder="Ask about your environment…"
+          rows="1"
+          aria-label="Message input"
+          onkeydown="handleChatKey(event)"
+          oninput="autoResizeTextarea(this)"
+        ></textarea>
+      </div>
+      <button class="chat-panel__send" id="chatSend" aria-label="Send message" onclick="sendChatMessage()">
+        <svg width="16" height="16" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true"><path d="M27.45 15.11l-22-11a1 1 0 0 0-1.08.12 1 1 0 0 0-.29 1L7 16 4.08 26.74a1 1 0 0 0 .29 1A1 1 0 0 0 5 28a1 1 0 0 0 .45-.11l22-11a1 1 0 0 0 0-1.78zm-20.9 9.49L8.76 17H18v-2H8.76L6.55 7.4 24.76 16z"/></svg>
+      </button>
+    </div>
+  </div>
+
+</aside><!-- /chat-panel -->
+
+<script>
+  // ── Dashboard state (A/B toggle) ─────────────────────────────────────────
+  var _dashState = 'a';
+
+  // ── Donut arc helpers ─────────────────────────────────────────────────────
+  function arcDash(pct) {
+    var circ   = 169.6;
+    var filled = (pct / 100) * circ;
+    var gap    = circ - filled;
+    return filled.toFixed(1) + ' ' + gap.toFixed(1);
+  }
+  function arcOffset(pct) {
+    var circ = 169.6;
+    return (-(pct / 100) * circ).toFixed(1);
+  }
+
+  function setDashboardState(state) {
+    _dashState = state;
+    var isB = (state === 'b');
+
+    // Sub-task 1: AI left card visibility
+    document.getElementById('state-a').style.display = isB ? 'none' : 'block';
+    document.getElementById('state-b').style.display = isB ? 'block' : 'none';
+
+    // Sub-task 3: AI summary strip
+    document.getElementById('ai-summary-meta').textContent = isB
+      ? 'Live incident · 10 Sept 2026 · 47 hosts · 12 services'
+      : 'Dashboard as of 10 Sept 2026 · 47 hosts · 12 services';
+    document.getElementById('ai-summary-text').innerHTML = isB
+      ? '<strong style="color:#da1e28">18 pods crash-looping in payments-prod after Deploy #482.</strong><br>Scaling won\'t fix it. → Roll back now.'
+      : '3 active P1 alerts. Last deploy 2h ago — no error spike detected. 94% of hosts healthy. 6 auto-remediation actions running. No manual intervention needed yet.';
+
+    // Sub-task 4: KPI 2×2 grid
+    var alertsVal  = document.getElementById('kpi-alerts-value');
+    var alertsUnit = document.getElementById('kpi-alerts-unit');
+    var alertsHelp = document.getElementById('kpi-alerts-helper');
+    var deployVal  = document.getElementById('kpi-deploy-value');
+    var deployUnit = document.getElementById('kpi-deploy-unit');
+    var deployHelp = document.getElementById('kpi-deploy-helper');
+    var podsVal    = document.getElementById('kpi-pods-value');
+    var podsHelp   = document.getElementById('kpi-pods-helper');
+    var remVal     = document.getElementById('kpi-remediation-value');
+    var remUnit    = document.getElementById('kpi-remediation-unit');
+    var remHelp    = document.getElementById('kpi-remediation-helper');
+
+    if (isB) {
+      alertsVal.textContent  = '18'; alertsVal.style.color  = '#da1e28';
+      alertsUnit.textContent = 'Critical';
+      alertsHelp.textContent = 'Pod restarts · payments-prod-cluster';
+      deployVal.textContent  = '+4,100'; deployVal.style.color = '#da1e28';
+      deployUnit.textContent = '%';
+      deployHelp.textContent = 'Error delta · Deploy #482 · 8 min after push';
+      podsVal.textContent    = '18'; podsVal.style.color    = '#da1e28';
+      podsHelp.textContent   = 'Crash-looping · payments-prod';
+      remVal.textContent     = 'Running'; remVal.style.color  = '#42be65';
+      remUnit.textContent    = '';
+      remHelp.textContent    = '+5 replicas · DB pool at 99% · started 1 min ago';
+    } else {
+      alertsVal.textContent  = '3';    alertsVal.style.color  = '';
+      alertsUnit.textContent = 'Critical';
+      alertsHelp.textContent = '1 P1 · 2 P2 · 0 P3';
+      deployVal.textContent  = '+0.2'; deployVal.style.color  = '';
+      deployUnit.textContent = '%';
+      deployHelp.textContent = 'Last deploy 2h ago · within threshold';
+      podsVal.textContent    = '7';    podsVal.style.color    = '';
+      podsHelp.textContent   = 'Rolling 1h · 2 namespaces affected';
+      remVal.textContent     = '6';    remVal.style.color     = '';
+      remUnit.textContent    = 'running';
+      remHelp.textContent    = '6 / 6 actions successful';
+    }
+
+    // Sub-task 5: Bottom row tiles ────────────────────────────────────────────
+
+    // ── Tile 2: closure split (Scenario A static; donut elements removed) ────
+    var closureAutoVal   = document.getElementById('closure-auto-val');
+    var closureManualVal = document.getElementById('closure-manual-val');
+    if (closureAutoVal)   closureAutoVal.innerHTML   = isB ? '73<sup>%</sup>' : '83<sup>%</sup>';
+    if (closureManualVal) closureManualVal.innerHTML = isB ? '27<sup>%</sup>' : '17<sup>%</sup>';
+
+    // Sub-task 6: Chat suggestion chips
+    var sugg = document.getElementById('chatSuggestions');
+    if (sugg && sugg.style.display !== 'none') {
+      var btns = sugg.querySelectorAll('.chat-suggestion');
+      if (isB) {
+        // Replace with 4 Scenario B chips (remove extra if needed)
+        var bChips = _suggB;
+        btns.forEach(function(btn, i) {
+          if (i < bChips.length) {
+            btn.textContent = bChips[i];
+            btn.removeAttribute('data-widget');
+            btn.style.display = '';
+          } else {
+            btn.style.display = 'none';
+          }
+        });
+      } else {
+        btns.forEach(function(btn, i) {
+          if (i < _suggA.length) {
+            btn.textContent = _suggA[i];
+            if (_suggAWidgets[i]) btn.dataset.widget = _suggAWidgets[i];
+            else btn.removeAttribute('data-widget');
+            btn.style.display = '';
+          } else {
+            btn.style.display = 'none';
+          }
+        });
+      }
+    }
+  }
+
+  // ── Persona menu ──────────────────────────────────────────────────────────
+  (function() {
+    var current = 'rj';
+    localStorage.setItem('instana-persona', current);
+    var items = document.querySelectorAll('.persona-dropdown__item');
+    items.forEach(function(el) {
+      if (el.dataset.persona === current) el.classList.add('persona-dropdown__item--active');
+    });
+  })();
+
+  function togglePersonaMenu(e) {
+    e.stopPropagation();
+    var btn  = document.getElementById('personaBtn');
+    var menu = document.getElementById('personaMenu');
+    var open = menu.getAttribute('aria-hidden') === 'false';
+    menu.setAttribute('aria-hidden', open ? 'true' : 'false');
+    btn.setAttribute('aria-expanded', open ? 'false' : 'true');
+  }
+
+  document.addEventListener('click', function() {
+    var menu = document.getElementById('personaMenu');
+    if (menu) {
+      menu.setAttribute('aria-hidden', 'true');
+      document.getElementById('personaBtn').setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // ── Scenario toggle (header CTA button) ──────────────────────────────────
+  function toggleScenario() {
+    var next = _dashState === 'a' ? 'b' : 'a';
+    setDashboardState(next);
+    var btn = document.getElementById('demoToggleBtn');
+    btn.textContent = next === 'b' ? 'SCENARIO B' : 'SCENARIO A';
+    btn.classList.toggle('active', next === 'b');
+  }
+
+  document.addEventListener('keydown', function(e) {
+    // Shift+S — toggle dashboard state (hidden presenter shortcut)
+    if (e.shiftKey && e.key === 'S') {
+      toggleScenario();
+      return;
+    }
+    if (e.key === 'Escape') {
+      var menu = document.getElementById('personaMenu');
+      if (menu) {
+        menu.setAttribute('aria-hidden', 'true');
+        document.getElementById('personaBtn').setAttribute('aria-expanded', 'false');
+        document.getElementById('personaBtn').focus();
+      }
+      // Also close chat panel on Escape
+      if (document.body.classList.contains('chat-open')) toggleChat();
+    }
+  });
+
+  // ── AI Chat panel ─────────────────────────────────────────────────────────
+  function restartChat() {
+    var log  = document.getElementById('chatMessages');
+    var sugg = document.getElementById('chatSuggestions');
+    var msgs = log.querySelectorAll('.chat-msg, .chat-typing');
+    msgs.forEach(function(el) { el.remove(); });
+    if (sugg) sugg.style.display = '';
+  }
+
+  function toggleChat() {
+    var open   = document.body.classList.toggle('chat-open');
+    var panel  = document.getElementById('chatPanel');
+    var toggle = document.getElementById('aiChatToggle');
+    panel.setAttribute('aria-hidden', open ? 'false' : 'true');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.classList.toggle('view-btn--ai--active', open);
+    if (open) {
+      setTimeout(function() {
+        document.getElementById('chatInput').focus();
+      }, 320);
+    }
+  }
+
+  var AI_RESPONSES = {
+    'slo breach':      'The SLO breach at 02:14 was triggered by a spike in p99 latency on the **checkout-service** (438ms vs. 200ms threshold). Root cause: a slow DB query in the payment-authorisation path following a schema migration deployed at 01:58.',
+    'latency':         'Payment latency trended up from ~85ms (p50) at 18:00 to a peak of 312ms (p99) at 02:14, then recovered to 92ms by 04:30 after the auto-rollback completed.',
+    'checkout':        'checkout-service logged 847 5xx errors between 02:08–02:31. The errors mapped to a single upstream dependency: **payment-gateway-v2** returning `TIMEOUT` on calls to the fraud-scoring API.',
+    'incident':        'In the last 24h there were **3 incidents**: (1) SLO breach 02:14–04:30 — resolved; (2) Pod OOM-kill on worker-node-07 at 09:42 — resolved; (3) Elevated error rate on notifications-service 14:10 — ongoing.',
+    'crash-loop':      '**18 pods** in the payments-prod namespace are crash-looping after Deploy #482 was pushed at 09:34. Root cause: the deploy raised the DB query volume by 6× but did not raise the connection pool ceiling (currently at max 100 connections, 99% utilised). Auto-scale has added 5 replicas but they are also hitting the pool limit.',
+    'roll back':       'Rollback criteria: if error rate does not drop below 500 errors/min within **3 minutes**, initiate rollback of Deploy #482 using `kubectl rollout undo deployment/payment-service`. The root cause is a missing DB connection pool ceiling increase — the hotfix branch `hotfix/pool-ceiling-482` is ready to cherry-pick if you prefer a forward fix over rollback. Auto-scale +5 replicas still running — wait for them to register before deciding. Current status: **1 min 40 sec elapsed** · window closes in ~80 sec.',
+    'replicas':        'The 5 new replicas from the auto-scale action must **not** be scheduled on worker-04 (CPU at 96%). The scheduler will use the remaining 6 worker nodes. To enforce this, add a taint to worker-04: `kubectl taint nodes worker-04 overloaded=true:NoSchedule`. Instana has flagged this placement risk automatically.',
+    'blast radius':    'Current blast radius: **3 services** impacted (payment-service, cart-api, order-notifications). **7 hosts** showing elevated CPU/memory. **2 K8s namespaces** affected (payments-prod, cart-prod). Estimated user impact: ~18% of checkout requests failing. No database corruption detected.',
+    'default':         'I\'m checking the telemetry for your Payment Services environment. Based on current data, all critical services are within SLO thresholds. Is there a specific service or time window you\'d like me to dig into?'
+  };
+
+  function getAIResponse(text) {
+    var t = text.toLowerCase();
+    // Scenario B patterns first
+    if (t.includes('crash') || t.includes('crash-loop') || (t.includes('18') && t.includes('pod'))) return AI_RESPONSES['crash-loop'];
+    if (t.includes('roll back') || t.includes('rollback') || t.includes('#482'))                    return AI_RESPONSES['roll back'];
+    if (t.includes('replica') || t.includes('land') || t.includes('placement'))                     return AI_RESPONSES['replicas'];
+    if (t.includes('blast') || t.includes('blast radius'))                                           return AI_RESPONSES['blast radius'];
+    // Scenario A patterns
+    if (t.includes('slo') || t.includes('02:14') || t.includes('breach')) return AI_RESPONSES['slo breach'];
+    if (t.includes('latency') || t.includes('trend') || t.includes('p99'))  return AI_RESPONSES['latency'];
+    if (t.includes('checkout') || t.includes('error'))                      return AI_RESPONSES['checkout'];
+    if (t.includes('incident') || t.includes('summary') || t.includes('24h')) return AI_RESPONSES['incident'];
+    return AI_RESPONSES['default'];
+  }
+
+  var WX_AVATAR_SVG =
+    '<svg class="chat-msg__ai-avatar" viewBox="0 0 32 32" fill="none" aria-hidden="true">' +
+      '<circle cx="16" cy="16" r="15" stroke="#a56eff" stroke-width="1.5" fill="none"/>' +
+      '<ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none"/>' +
+      '<ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none" transform="rotate(60 16 16)"/>' +
+      '<ellipse cx="16" cy="16" rx="15" ry="6" stroke="#4589ff" stroke-width="1.5" fill="none" transform="rotate(120 16 16)"/>' +
+      '<circle cx="16" cy="16" r="2.5" fill="#4589ff"/>' +
+      '<circle cx="16" cy="1" r="2" fill="#a56eff"/>' +
+      '<circle cx="28.99" cy="8.5" r="2" fill="#4589ff"/>' +
+      '<circle cx="3.01" cy="8.5" r="2" fill="#4589ff"/>' +
+    '</svg>';
+
+  var FEEDBACK_HTML =
+    '<div class="chat-msg__feedback">' +
+      '<button class="chat-feedback-btn" aria-label="Thumbs up"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M26 31H6a2 2 0 0 1-2-2V17a2 2 0 0 1 2-2h4V5a3 3 0 0 1 6 0v6h6.22A3 3 0 0 1 25 13.92L27.93 23A3 3 0 0 1 26 31zM6 17v12h20a1 1 0 0 0 .95-1.32L24 18.68A1 1 0 0 0 23.22 18H14V5a1 1 0 0 0-2 0v12H6z"/></svg></button>' +
+      '<button class="chat-feedback-btn" aria-label="Thumbs down"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M6 1h20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4v10a3 3 0 0 1-6 0V21H9.78A3 3 0 0 1 7 18.08L4.07 9A3 3 0 0 1 6 1zm20 14V3H6a1 1 0 0 0-.95 1.32L8 13.32A1 1 0 0 0 8.78 14H18v10a1 1 0 0 0 2 0V14h6z"/></svg></button>' +
+      '<button class="chat-feedback-btn" aria-label="Copy"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M28 10v18H10V10h18m0-2H10a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V10a2 2 0 0 0-2-2z"/><path d="M4 18H2V4a2 2 0 0 1 2-2h14v2H4z"/></svg></button>' +
+      '<button class="chat-feedback-btn" aria-label="Regenerate"><svg width="14" height="14" viewBox="0 0 32 32"><path d="M12 10H6.78A11 11 0 0 1 27 16a1 1 0 0 0 2 0A13 13 0 0 0 6 6.16V2l-6 5 6 5V8h6zM20 22h-5.23A11 11 0 0 1 5 16a1 1 0 0 0-2 0A13 13 0 0 0 26 25.84V30l6-5-6-5z"/></svg></button>' +
+    '</div>';
+
+  function getNow() {
+    var d = new Date();
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  }
+
+  function addMessage(role, text) {
+    var log  = document.getElementById('chatMessages');
+    var div  = document.createElement('div');
+    div.className = 'chat-msg chat-msg--' + role;
+    var now = getNow();
+    if (role === 'ai') {
+      div.innerHTML =
+        '<div class="chat-msg__meta-row">' + WX_AVATAR_SVG + '<span class="chat-msg__sender">watsonx ' + now + '</span></div>' +
+        '<div class="chat-msg__bubble-row"><div class="chat-msg__bubble">' +
+          text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') +
+        '</div></div>' +
+        FEEDBACK_HTML;
+    } else {
+      div.innerHTML =
+        '<div class="chat-msg__meta-row"><span class="chat-msg__sender">You ' + now + '</span></div>' +
+        '<div class="chat-msg__bubble-row"><div class="chat-msg__bubble">' +
+          text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>') +
+        '</div></div>';
+    }
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+    return div;
+  }
+
+  function addTypingIndicator() {
+    var log = document.getElementById('chatMessages');
+    var div = document.createElement('div');
+    div.className = 'chat-typing';
+    div.id = 'typingIndicator';
+    div.innerHTML =
+      WX_AVATAR_SVG.replace('class="chat-msg__ai-avatar"', 'class="chat-typing__avatar"') +
+      '<div class="chat-typing__dots"><span class="chat-typing__dot"></span><span class="chat-typing__dot"></span><span class="chat-typing__dot"></span></div>';
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function sendChatMessage() {
+    var input = document.getElementById('chatInput');
+    var text  = input.value.trim();
+    if (!text) return;
+
+    // Hide suggestions after first message
+    var sugg = document.getElementById('chatSuggestions');
+    if (sugg) sugg.style.display = 'none';
+
+    addMessage('user', text);
+    input.value = '';
+    autoResizeTextarea(input);
+
+    addTypingIndicator();
+
+    setTimeout(function() {
+      var indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+      addMessage('ai', getAIResponse(text));
+    }, 1200 + Math.random() * 600);
+  }
+
+  function sendSuggestion(btn) {
+    var widgetId = btn.dataset.widget;
+    if (widgetId) {
+      addWidgetChart(widgetId, btn.textContent.trim());
+      return;
+    }
+    var text = btn.textContent.trim();
+    document.getElementById('chatInput').value = text;
+    sendChatMessage();
+  }
+
+  function addWidgetChart(widgetId, label) {
+    var sugg = document.getElementById('chatSuggestions');
+    if (sugg) sugg.style.display = 'none';
+
+    addMessage('user', label);
+    addTypingIndicator();
+
+    setTimeout(function() {
+      var indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+
+      var log = document.getElementById('chatMessages');
+      var div = document.createElement('div');
+      div.className = 'chat-msg chat-msg--ai';
+
+      var bubble = document.createElement('div');
+      bubble.className = 'chat-msg__bubble chat-msg__bubble--chart';
+
+      if (widgetId === 'error-rate-sparkline') {
+        bubble.innerHTML =
+          '<p style="margin:0 0 8px;font-size:12px;color:#525252;">Error rate (%) · last 24h · 3 services</p>' +
+          '<svg viewBox="0 0 320 120" width="100%" style="display:block;overflow:visible" aria-label="Service error rate sparkline chart">' +
+            // Y-axis gridlines
+            '<line x1="32" y1="10" x2="315" y2="10" stroke="#e0e0e0" stroke-width="0.5"/>' +
+            '<line x1="32" y1="35" x2="315" y2="35" stroke="#e0e0e0" stroke-width="0.5"/>' +
+            '<line x1="32" y1="60" x2="315" y2="60" stroke="#e0e0e0" stroke-width="0.5"/>' +
+            '<line x1="32" y1="85" x2="315" y2="85" stroke="#e0e0e0" stroke-width="0.5"/>' +
+            '<line x1="32" y1="110" x2="315" y2="110" stroke="#e0e0e0" stroke-width="0.5"/>' +
+            // Y-axis labels
+            '<text x="28" y="13"  text-anchor="end" font-size="9" fill="#6f6f6f">5%</text>' +
+            '<text x="28" y="38"  text-anchor="end" font-size="9" fill="#6f6f6f">4%</text>' +
+            '<text x="28" y="63"  text-anchor="end" font-size="9" fill="#6f6f6f">3%</text>' +
+            '<text x="28" y="88"  text-anchor="end" font-size="9" fill="#6f6f6f">2%</text>' +
+            '<text x="28" y="113" text-anchor="end" font-size="9" fill="#6f6f6f">1%</text>' +
+            // X-axis labels (every 4h)
+            '<text x="32"  y="122" text-anchor="middle" font-size="9" fill="#6f6f6f">00:00</text>' +
+            '<text x="79"  y="122" text-anchor="middle" font-size="9" fill="#6f6f6f">04:00</text>' +
+            '<text x="126" y="122" text-anchor="middle" font-size="9" fill="#6f6f6f">08:00</text>' +
+            '<text x="173" y="122" text-anchor="middle" font-size="9" fill="#6f6f6f">12:00</text>' +
+            '<text x="220" y="122" text-anchor="middle" font-size="9" fill="#6f6f6f">16:00</text>' +
+            '<text x="267" y="122" text-anchor="middle" font-size="9" fill="#6f6f6f">20:00</text>' +
+            '<text x="315" y="122" text-anchor="middle" font-size="9" fill="#6f6f6f">24:00</text>' +
+            // payment-svc (blue) — spike 02:00–04:30
+            '<polyline fill="none" stroke="#4589ff" stroke-width="1.5" stroke-linejoin="round"' +
+              ' points="32,100 44,98 56,95 68,60 79,25 90,18 102,30 114,80 126,95 138,98 150,99 162,100 173,99 185,98 197,100 209,99 220,100 232,99 244,98 256,99 267,100 279,99 291,98 303,99 315,100"/>' +
+            // checkout-svc (purple) — moderate spike 02:00–03:30
+            '<polyline fill="none" stroke="#a56eff" stroke-width="1.5" stroke-linejoin="round"' +
+              ' points="32,102 44,101 56,100 68,72 79,45 90,38 102,55 114,88 126,100 138,102 150,103 162,102 173,101 185,100 197,102 209,101 220,102 232,101 244,100 256,101 267,102 279,101 291,100 303,101 315,102"/>' +
+            // fraud-svc (teal) — stable
+            '<polyline fill="none" stroke="#009d9a" stroke-width="1.5" stroke-linejoin="round"' +
+              ' points="32,107 44,106 56,107 68,106 79,107 90,106 102,107 114,106 126,107 138,106 150,107 162,106 173,107 185,106 197,107 209,106 220,107 232,106 244,107 256,106 267,107 279,106 291,107 303,106 315,107"/>' +
+            // Annotation: breach marker
+            '<line x1="79" y1="10" x2="79" y2="110" stroke="#fa4d56" stroke-width="1" stroke-dasharray="3,2"/>' +
+            '<text x="81" y="20" font-size="8" fill="#fa4d56">SLO breach 02:14</text>' +
+            // Legend
+            '<circle cx="36" cy="132" r="3" fill="#4589ff"/><text x="42" y="135" font-size="9" fill="#393939">payment-svc</text>' +
+            '<circle cx="106" cy="132" r="3" fill="#a56eff"/><text x="112" y="135" font-size="9" fill="#393939">checkout-svc</text>' +
+            '<circle cx="178" cy="132" r="3" fill="#009d9a"/><text x="184" y="135" font-size="9" fill="#393939">fraud-svc</text>' +
+          '</svg>' +
+          '<p style="margin:10px 0 0;font-size:12px;color:#525252;">**payment-svc** peaked at 4.8% error rate at 02:14 before auto-rollback. checkout-svc co-spiked due to upstream dependency. fraud-svc remained stable throughout.</p>';
+      }
+
+      // Convert **bold** markdown
+      bubble.innerHTML = bubble.innerHTML.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      div.appendChild(bubble);
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+
+      // Replace dashboard widget for error-rate-sparkline
+      if (widgetId === 'error-rate-sparkline') {
+        replaceAvgDetectTile();
+      }
+    }, 1400 + Math.random() * 400);
+  }
+
+  function replaceAvgDetectTile() {
+    var target = document.getElementById('tile-avg-detect');
+    if (!target) return;
+
+    var tile = document.createElement('div');
+    tile.className = 'error-rate-tile tile-animate-in';
+    tile.id = 'tile-error-rate';
+    tile.innerHTML =
+      '<div class="error-rate-tile__header">' +
+        '<span class="error-rate-tile__title">Service error rate</span>' +
+        '<div class="error-rate-tile__badge" role="img" aria-label="AI generated"><span class="error-rate-tile__badge-text">AI</span></div>' +
+      '</div>' +
+      '<div class="error-rate-tile__kpi">' +
+        '<span class="error-rate-tile__value">4.8</span>' +
+        '<span class="error-rate-tile__unit">% peak</span>' +
+      '</div>' +
+      '<div class="error-rate-tile__sub">payment-svc · last 24h · SLO threshold 2%</div>' +
+      '<div class="error-rate-tile__chart">' +
+        '<svg viewBox="0 0 200 80" width="100%" height="100%" style="display:block;overflow:visible" aria-label="Error rate trend">' +
+          '<line x1="0" y1="20" x2="200" y2="20" stroke="#e0e0e0" stroke-width="0.5"/>' +
+          '<line x1="0" y1="40" x2="200" y2="40" stroke="#e0e0e0" stroke-width="0.5"/>' +
+          '<line x1="0" y1="60" x2="200" y2="60" stroke="#e0e0e0" stroke-width="0.5"/>' +
+          '<text x="0" y="18"  font-size="7" fill="#8d8d8d">5%</text>' +
+          '<text x="0" y="38"  font-size="7" fill="#8d8d8d">3%</text>' +
+          '<text x="0" y="58"  font-size="7" fill="#8d8d8d">2%</text>' +
+          '<line x1="0" y1="50" x2="200" y2="50" stroke="#fa4d56" stroke-width="0.8" stroke-dasharray="3,2"/>' +
+          '<polyline fill="none" stroke="#4589ff" stroke-width="1.5" stroke-linejoin="round" points="10,62 30,60 50,57 65,38 78,8 90,6 104,14 118,48 134,60 148,62 160,62 175,62 190,62"/>' +
+          '<polyline fill="none" stroke="#a56eff" stroke-width="1.5" stroke-linejoin="round" points="10,65 30,64 50,63 65,45 78,28 90,24 104,35 118,55 134,63 148,65 160,65 175,65 190,65"/>' +
+          '<line x1="78" y1="0" x2="78" y2="70" stroke="#fa4d56" stroke-width="1" stroke-dasharray="2,2"/>' +
+          '<text x="80" y="12" font-size="6" fill="#fa4d56">02:14</text>' +
+          '<circle cx="14" cy="72" r="2.5" fill="#4589ff"/><text x="19" y="75" font-size="7" fill="#393939">payment-svc</text>' +
+          '<circle cx="90" cy="72" r="2.5" fill="#a56eff"/><text x="95" y="75" font-size="7" fill="#393939">checkout-svc</text>' +
+        '</svg>' +
+      '</div>' +
+      '<button class="error-rate-tile__arrow-btn" aria-label="View error rate details">' +
+        '<svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M18 6l-1.43 1.393L24.15 15H4v2h20.15l-7.58 7.573L18 26l10-10z" fill="#0f62fe"/></svg>' +
+      '</button>';
+
+    target.parentNode.replaceChild(tile, target);
+  }
+
+  function handleChatKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChatMessage();
+    }
+  }
+
+  function autoResizeTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
+
+  // ── Trace Panel ───────────────────────────────────────────────────────────
+
+  /**
+   * openPanel(type) — data-attribute dispatcher.
+   * Add data-panel="<type>" to any CTA button to open the correct panel.
+   */
+  function openPanel(type) {
+    if (type === 'openTrace') {
+      openTracePanel();
+    }
+  }
+
+  function openTracePanel() {
+    switchTraceTab('summary');
+    document.body.classList.add('trace-panel-open');
+    var panel = document.getElementById('tracePanel');
+    panel.setAttribute('aria-hidden', 'false');
+    if (document.body.classList.contains('chat-open')) toggleChat();
+  }
+
+  function closeTracePanel() {
+    document.body.classList.remove('trace-panel-open');
+    var panel = document.getElementById('tracePanel');
+    panel.setAttribute('aria-hidden', 'true');
+  }
+
+  function switchTraceTab(tabId) {
+    var buttons = document.querySelectorAll('.trace-panel__tab-btn');
+    buttons.forEach(function(btn) {
+      var active = btn.id === ('tp-tab-' + tabId);
+      btn.classList.toggle('trace-panel__tab-btn--active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    var panes = document.querySelectorAll('.trace-panel__tab-pane');
+    panes.forEach(function(pane) {
+      pane.classList.toggle('trace-panel__tab-pane--active', pane.id === ('tp-pane-' + tabId));
+    });
+  }
+
+  // Reusable toast for action feedback
+  function showToast(message) {
+    var existing = document.getElementById('tp-toast');
+    if (existing) existing.remove();
+
+    var toast = document.createElement('div');
+    toast.id = 'tp-toast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.style.cssText = [
+      'position:fixed',
+      'bottom:80px',
+      'right:24px',
+      'z-index:9500',
+      'background:#161616',
+      'color:#f4f4f4',
+      'font-family:IBM Plex Sans,sans-serif',
+      'font-size:13px',
+      'padding:10px 16px',
+      'max-width:340px',
+      'box-shadow:0 4px 12px rgba(0,0,0,0.3)',
+      'opacity:0',
+      'transform:translateY(8px)',
+      'transition:opacity 180ms,transform 180ms'
+    ].join(';');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+      });
+    });
+
+    setTimeout(function() {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(8px)';
+      setTimeout(function() { if (toast.parentNode) toast.remove(); }, 200);
+    }, 3500);
+  }
+
+  function tpAction(message) {
+    showToast(message);
+  }
+
+  function pingCarlos() {
+    showToast('Ping sent to Carlos via Slack');
+  }
+
+  function viewCarlosTrace() {
+    showToast('Opening Carlos\'s trace view in Instana...');
+  }
+
+  // Keyboard: Escape closes trace panel or export panel
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      if (document.body.classList.contains('trace-panel-open')) closeTracePanel();
+      if (document.body.classList.contains('export-open')) closeExportPanel();
+    }
+  });
+
+  // ── Export panel ──────────────────────────────────────────────────────────
+  var _exportOpenerBtn = null;
+
+  function toggleExportPanel() {
+    document.body.classList.contains('export-open') ? closeExportPanel() : openExportPanel();
+  }
+
+  function openExportPanel() {
+    if (document.body.classList.contains('trace-panel-open')) closeTracePanel();
+    if (document.body.classList.contains('chat-open')) toggleChat();
+    _exportOpenerBtn = document.querySelector('[aria-controls="exportPanel"]');
+    document.body.classList.add('export-open');
+    var panel = document.getElementById('exportPanel');
+    panel.setAttribute('aria-hidden', 'false');
+    setTimeout(function() {
+      var close = document.getElementById('exportPanelClose');
+      if (close) close.focus();
+    }, 230);
+  }
+
+  function closeExportPanel() {
+    document.body.classList.remove('export-open');
+    var panel = document.getElementById('exportPanel');
+    panel.setAttribute('aria-hidden', 'true');
+    if (_exportOpenerBtn) { _exportOpenerBtn.focus(); _exportOpenerBtn = null; }
+  }
+
+  function switchExportTab(id) {
+    document.querySelectorAll('.export-tab').forEach(function(btn) {
+      var active = btn.id === ('exportTab-' + id);
+      btn.classList.toggle('export-tab--active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('.export-tab-body').forEach(function(pane) {
+      pane.classList.toggle('export-tab-body--visible', pane.id === ('exportBody-' + id));
+    });
+    var confirmBtn = document.getElementById('exportConfirmBtn');
+    if (confirmBtn) confirmBtn.textContent = (id === 'schedule') ? 'Save schedule' : (id === 'alerts') ? 'Save alert rules' : 'Send now';
+  }
+
+  function exportToggleCheck(label) {
+    var cb = label.querySelector('.export-cb');
+    cb.classList.toggle('export-cb--checked');
+  }
+
+  function exportSelectFormat(btn) {
+    btn.closest('.export-format-row').querySelectorAll('.export-format-btn').forEach(function(b) {
+      b.classList.remove('export-format-btn--active');
+    });
+    btn.classList.add('export-format-btn--active');
+  }
+
+  function exportSelectDest(btn) {
+    btn.closest('.export-dest-row').querySelectorAll('.export-dest-btn').forEach(function(b) {
+      b.classList.remove('export-dest-btn--active');
+    });
+    btn.classList.add('export-dest-btn--active');
+  }
+
+  function exportSelectDestAlert(btn) {
+    btn.classList.toggle('export-dest-btn--active');
+  }
+
+  function exportToggleChip(btn) {
+    btn.classList.toggle('export-alert-chip--active');
+  }
+
+  function exportToggleSwitch(row) {
+    var track = row.querySelector('.export-toggle-track');
+    track.classList.toggle('export-toggle-track--on');
+  }
+
+  function exportConfirm() {
+    var activeTab = document.querySelector('.export-tab--active');
+    var tabId = activeTab ? activeTab.id.replace('exportTab-', '') : 'once';
+    var titles = { once: 'Report sent', schedule: 'Schedule saved', alerts: 'Alert rules saved' };
+    var bodies = {
+      once: 'Delivered to your Slack channel and email',
+      schedule: 'Your scheduled summary is now active',
+      alerts: 'You\'ll be notified when conditions are met'
+    };
+    closeExportPanel();
+    exportShowToast(titles[tabId] || 'Done', bodies[tabId] || '');
+  }
+
+  function exportShowToast(title, body) {
+    var toast = document.getElementById('exportToast');
+    document.getElementById('exportToastTitle').textContent = title;
+    document.getElementById('exportToastBody').textContent = body;
+    toast.classList.add('export-toast--visible');
+    setTimeout(function() { toast.classList.remove('export-toast--visible'); }, 3500);
+  }
+
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     EXPORT & NOTIFICATIONS PANEL — RJ (DevOps)
+═══════════════════════════════════════════════════════════════════ -->
+<aside class="export-panel" id="exportPanel"
+  role="complementary" aria-label="Export and notifications" aria-hidden="true">
+
+  <!-- Header -->
+  <div class="export-panel__header">
+    <div class="export-panel__header-top">
+      <div class="export-panel__title-block">
+        <div class="export-panel__title">Export &amp; Notifications</div>
+        <div class="export-panel__subtitle">Send this DevOps dashboard as a summary report</div>
+      </div>
+      <button class="export-panel__close" id="exportPanelClose"
+        aria-label="Close export panel" onclick="closeExportPanel()">
+        <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4l6.6 6.6L8 22.6 9.4 24l6.6-6.6 6.6 6.6 1.4-1.4-6.6-6.6z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="export-tabs" role="tablist">
+    <button class="export-tab export-tab--active" role="tab"
+      id="exportTab-once" aria-selected="true" aria-controls="exportBody-once"
+      onclick="switchExportTab('once')">
+      <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 24v4H6v-4H4v4a2 2 0 002 2h20a2 2 0 002-2v-4zm0-10l-1.41-1.41L17 20.17V2h-2v18.17l-7.59-7.58L6 14l10 10 10-10z"/></svg>
+      Export once
+    </button>
+    <button class="export-tab" role="tab"
+      id="exportTab-schedule" aria-selected="false" aria-controls="exportBody-schedule"
+      onclick="switchExportTab('schedule')">
+      <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M26 6h-4V2h-2v4h-8V2h-2v4H6a2 2 0 00-2 2v18a2 2 0 002 2h20a2 2 0 002-2V8a2 2 0 00-2-2zm0 20H6V12h20zm0-12H6V8h4v2h2V8h8v2h2V8h4z"/></svg>
+      Scheduled
+    </button>
+    <button class="export-tab" role="tab"
+      id="exportTab-alerts" aria-selected="false" aria-controls="exportBody-alerts"
+      onclick="switchExportTab('alerts')">
+      <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path d="M28.7 19.3L26 16.6V13a10 10 0 00-9-9.9V1h-2v2.1A10 10 0 006 13v3.6l-2.7 2.7A1 1 0 004 21h7a5 5 0 0010 0h7a1 1 0 00.7-1.7zM16 24a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
+      Critical alerts
+    </button>
+  </div>
+
+  <!-- Body -->
+  <div class="export-panel__body">
+
+    <!-- ══════════ TAB 1: EXPORT ONCE ══════════ -->
+    <div class="export-tab-body export-tab-body--visible" id="exportBody-once" role="tabpanel" aria-labelledby="exportTab-once">
+
+      <div class="export-section-label">What to include</div>
+      <div class="export-content-list">
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb export-cb--checked"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">DevOps summary</div><div class="export-content-item__sub">Infrastructure health, pod status, CPU/memory</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb export-cb--checked"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">P1 incident report</div><div class="export-content-item__sub">Root cause, timeline, rollback status</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb export-cb--checked"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">Deploy pipeline status</div><div class="export-content-item__sub">Recent deploys, failures, rollback events</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">Node &amp; cluster metrics</div><div class="export-content-item__sub">DB pool saturation, worker taint events</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">Auto-scale &amp; capacity log</div><div class="export-content-item__sub">Scale events, replica changes, pod restarts</div></div>
+        </label>
+      </div>
+
+      <div class="export-section-label">Format</div>
+      <div class="export-format-row">
+        <button class="export-format-btn export-format-btn--active" onclick="exportSelectFormat(this)">
+          <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M30 11H22V9l-6-6H4a2 2 0 00-2 2v26a2 2 0 002 2h20a2 2 0 002-2v-2h4a2 2 0 002-2V13a2 2 0 00-2-2zM22 3.4L26.6 8H22zM24 29H4V5h16v5a2 2 0 002 2h2v1H12a2 2 0 00-2 2v10a2 2 0 002 2h12zm6-4H12V15h18z"/></svg> PDF
+        </button>
+        <button class="export-format-btn" onclick="exportSelectFormat(this)">
+          <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M28 6H4a2 2 0 00-2 2v16a2 2 0 004 2h24a2 2 0 002-2V8a2 2 0 00-2-2zm0 18H4V8h24z"/></svg> Slide deck
+        </button>
+        <button class="export-format-btn" onclick="exportSelectFormat(this)">
+          <svg width="14" height="14" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M28 3H21v2h7v22H4V5h7V3H4a2 2 0 00-2 2v22a2 2 0 002 2h24a2 2 0 002-2V5a2 2 0 00-2-2z"/></svg> CSV data
+        </button>
+      </div>
+
+      <div class="export-section-label">Send to</div>
+      <div class="export-dest-row">
+        <button class="export-dest-btn export-dest-btn--active" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 54 54" fill="none" aria-hidden="true"><path d="M19.71 33.56a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22v4.22z" fill="#E01E5A"/><path d="M21.83 33.56a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V33.56z" fill="#E01E5A"/><path d="M26.05 19.71a4.22 4.22 0 01-4.22-4.22 4.22 4.22 0 018.44 0v4.22h-4.22z" fill="#36C5F0"/><path d="M26.05 21.83a4.22 4.22 0 010 8.44H15.49a4.22 4.22 0 010-8.44h10.56z" fill="#36C5F0"/><path d="M39.9 26.05a4.22 4.22 0 110 8.44 4.22 4.22 0 01-4.22-4.22v-4.22H39.9z" fill="#2EB67D"/><path d="M37.77 26.05a4.22 4.22 0 010-8.44h10.56a4.22 4.22 0 010 8.44H37.77z" fill="#2EB67D"/><path d="M33.56 39.9a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22V39.9z" fill="#ECB22E"/><path d="M33.56 37.77a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V37.77z" fill="#ECB22E"/></svg>
+          <div class="export-dest-btn__label">Slack</div>
+        </button>
+        <button class="export-dest-btn" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#0078D4"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Outlook</div>
+        </button>
+        <button class="export-dest-btn" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#6f6f6f"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Email</div>
+        </button>
+      </div>
+
+      <div class="export-input-row">
+        <label class="export-input-label" for="exportOnceChannel">Slack channel</label>
+        <input class="export-input" id="exportOnceChannel" type="text" placeholder="#devops-reports" value="#devops-reports">
+        <div class="export-input-hint">Type a channel name or paste a webhook URL</div>
+      </div>
+
+      <div class="export-section-label">Recipients</div>
+      <div class="export-tag-row">
+        <span class="export-tag">rj@acme.com<button class="export-tag__remove" aria-label="Remove rj@acme.com"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4l6.6 6.6L8 22.6 9.4 24l6.6-6.6 6.6 6.6 1.4-1.4-6.6-6.6z"/></svg></button></span>
+        <span class="export-tag">devops-team@acme.com<button class="export-tag__remove" aria-label="Remove devops-team@acme.com"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M24 9.4L22.6 8 16 14.6 9.4 8 8 9.4l6.6 6.6L8 22.6 9.4 24l6.6-6.6 6.6 6.6 1.4-1.4-6.6-6.6z"/></svg></button></span>
+      </div>
+      <div class="export-input-row">
+        <input class="export-input" type="text" placeholder="Add email or @user...">
+      </div>
+
+      <div class="export-section-label">Preview</div>
+      <div class="export-preview">
+        <div class="export-preview__row"><span class="export-preview__key">Sending</span><span class="export-preview__val">DevOps summary, P1 incident, Pipeline</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Format</span><span class="export-preview__val">PDF</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Via</span><span class="export-preview__val">Slack · #devops-reports</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Date range</span><span class="export-preview__val">Last 30 days</span></div>
+      </div>
+
+    </div><!-- /exportBody-once -->
+
+    <!-- ══════════ TAB 2: SCHEDULED ══════════ -->
+    <div class="export-tab-body" id="exportBody-schedule" role="tabpanel" aria-labelledby="exportTab-schedule">
+
+      <div class="export-section-label">Frequency</div>
+      <div class="export-schedule-row">
+        <div class="export-select-wrap">
+          <select class="export-select" aria-label="Cadence"><option>Daily</option><option selected>Weekly</option><option>Monthly</option></select>
+        </div>
+        <div class="export-select-wrap">
+          <select class="export-select" aria-label="Day"><option>Monday</option><option selected>Friday</option><option>Sunday</option></select>
+        </div>
+      </div>
+      <div class="export-schedule-row">
+        <div class="export-select-wrap">
+          <select class="export-select" aria-label="Time"><option>06:00</option><option>07:00</option><option selected>08:00</option><option>09:00</option></select>
+        </div>
+        <div class="export-select-wrap">
+          <select class="export-select" aria-label="Timezone"><option selected>IST (UTC+5:30)</option><option>UTC</option><option>EST (UTC-5)</option></select>
+        </div>
+      </div>
+
+      <div class="export-section-label">What to include</div>
+      <div class="export-content-list">
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb export-cb--checked"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">DevOps summary</div><div class="export-content-item__sub">Infrastructure health, pod status, CPU/memory</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb export-cb--checked"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">Week-over-week trend</div><div class="export-content-item__sub">Deploy frequency, rollback rate, pod restarts</div></div>
+        </label>
+        <label class="export-content-item" onclick="exportToggleCheck(this)">
+          <div class="export-cb"><svg width="10" height="10" viewBox="0 0 32 32"><path d="M13 24L4 15l1.4-1.4L13 21.2 26.6 7.6 28 9z"/></svg></div>
+          <div><div class="export-content-item__label">Node &amp; cluster metrics</div><div class="export-content-item__sub">DB pool saturation, worker taint events</div></div>
+        </label>
+      </div>
+
+      <div class="export-section-label">Deliver to</div>
+      <div class="export-dest-row">
+        <button class="export-dest-btn export-dest-btn--active" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 54 54" fill="none" aria-hidden="true"><path d="M19.71 33.56a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22v4.22z" fill="#E01E5A"/><path d="M21.83 33.56a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V33.56z" fill="#E01E5A"/><path d="M26.05 19.71a4.22 4.22 0 01-4.22-4.22 4.22 4.22 0 018.44 0v4.22h-4.22z" fill="#36C5F0"/><path d="M26.05 21.83a4.22 4.22 0 010 8.44H15.49a4.22 4.22 0 010-8.44h10.56z" fill="#36C5F0"/><path d="M39.9 26.05a4.22 4.22 0 110 8.44 4.22 4.22 0 01-4.22-4.22v-4.22H39.9z" fill="#2EB67D"/><path d="M37.77 26.05a4.22 4.22 0 010-8.44h10.56a4.22 4.22 0 010 8.44H37.77z" fill="#2EB67D"/><path d="M33.56 39.9a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22V39.9z" fill="#ECB22E"/><path d="M33.56 37.77a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V37.77z" fill="#ECB22E"/></svg>
+          <div class="export-dest-btn__label">Slack</div>
+        </button>
+        <button class="export-dest-btn" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#0078D4"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Outlook</div>
+        </button>
+        <button class="export-dest-btn" onclick="exportSelectDest(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#6f6f6f"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Email</div>
+        </button>
+      </div>
+
+      <div class="export-input-row">
+        <label class="export-input-label" for="exportSchedChannel">Slack channel</label>
+        <input class="export-input" id="exportSchedChannel" type="text" placeholder="#devops-reports" value="#devops-reports">
+      </div>
+
+      <div class="export-section-label">Preview</div>
+      <div class="export-preview">
+        <div class="export-preview__row"><span class="export-preview__key">Cadence</span><span class="export-preview__val">Every Friday · 08:00 IST</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Includes</span><span class="export-preview__val">DevOps summary + WoW trend</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Via</span><span class="export-preview__val">Slack · #devops-reports</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Next delivery</span><span class="export-preview__val">Friday, Aug 29 · 08:00</span></div>
+      </div>
+
+    </div><!-- /exportBody-schedule -->
+
+    <!-- ══════════ TAB 3: CRITICAL ALERTS ══════════ -->
+    <div class="export-tab-body" id="exportBody-alerts" role="tabpanel" aria-labelledby="exportTab-alerts">
+
+      <p style="font-size:13px;color:#525252;line-height:1.6;margin-bottom:20px">Get notified instantly when a critical infrastructure event occurs — without waiting for the next scheduled report.</p>
+
+      <div class="export-section-label">Notify me on</div>
+      <div class="export-alert-row">
+        <button class="export-alert-chip export-alert-chip--critical export-alert-chip--active" onclick="exportToggleChip(this)">
+          <span class="export-alert-chip__dot" style="background:#da1e28"></span> Critical
+        </button>
+        <button class="export-alert-chip export-alert-chip--high export-alert-chip--active" onclick="exportToggleChip(this)">
+          <span class="export-alert-chip__dot" style="background:#ff832b"></span> High
+        </button>
+        <button class="export-alert-chip export-alert-chip--warn" onclick="exportToggleChip(this)">
+          <span class="export-alert-chip__dot" style="background:#f1c21b"></span> Warning
+        </button>
+      </div>
+
+      <div class="export-section-label">Conditions</div>
+      <div class="export-toggle-row" onclick="exportToggleSwitch(this)">
+        <div class="export-toggle-label">Pod crash-loop detected<span>Trigger when any production pod enters CrashLoopBackOff state</span></div>
+        <div class="export-toggle-track export-toggle-track--on"><div class="export-toggle-thumb"></div></div>
+      </div>
+      <div class="export-toggle-row" onclick="exportToggleSwitch(this)">
+        <div class="export-toggle-label">P1 incident opened<span>Trigger when a new Priority 1 incident is created</span></div>
+        <div class="export-toggle-track export-toggle-track--on"><div class="export-toggle-thumb"></div></div>
+      </div>
+      <div class="export-toggle-row" onclick="exportToggleSwitch(this)">
+        <div class="export-toggle-label">Deploy rollback triggered<span>Trigger when any service rollback is initiated in production</span></div>
+        <div class="export-toggle-track"><div class="export-toggle-thumb"></div></div>
+      </div>
+      <div class="export-toggle-row" onclick="exportToggleSwitch(this)">
+        <div class="export-toggle-label">Node saturation &gt;90%<span>Trigger when any worker node CPU or memory exceeds 90%</span></div>
+        <div class="export-toggle-track"><div class="export-toggle-thumb"></div></div>
+      </div>
+
+      <div class="export-section-label">Deliver alerts to</div>
+      <div class="export-dest-row">
+        <button class="export-dest-btn export-dest-btn--active" onclick="exportSelectDestAlert(this)">
+          <svg width="20" height="20" viewBox="0 0 54 54" fill="none" aria-hidden="true"><path d="M19.71 33.56a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22v4.22z" fill="#E01E5A"/><path d="M21.83 33.56a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V33.56z" fill="#E01E5A"/><path d="M26.05 19.71a4.22 4.22 0 01-4.22-4.22 4.22 4.22 0 018.44 0v4.22h-4.22z" fill="#36C5F0"/><path d="M26.05 21.83a4.22 4.22 0 010 8.44H15.49a4.22 4.22 0 010-8.44h10.56z" fill="#36C5F0"/><path d="M39.9 26.05a4.22 4.22 0 110 8.44 4.22 4.22 0 01-4.22-4.22v-4.22H39.9z" fill="#2EB67D"/><path d="M37.77 26.05a4.22 4.22 0 010-8.44h10.56a4.22 4.22 0 010 8.44H37.77z" fill="#2EB67D"/><path d="M33.56 39.9a4.22 4.22 0 01-8.44 0 4.22 4.22 0 014.22-4.22h4.22V39.9z" fill="#ECB22E"/><path d="M33.56 37.77a4.22 4.22 0 018.44 0v10.56a4.22 4.22 0 01-8.44 0V37.77z" fill="#ECB22E"/></svg>
+          <div class="export-dest-btn__label">Slack</div>
+        </button>
+        <button class="export-dest-btn export-dest-btn--active" onclick="exportSelectDestAlert(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#0078D4"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Outlook</div>
+        </button>
+        <button class="export-dest-btn" onclick="exportSelectDestAlert(this)">
+          <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="6" width="28" height="20" rx="2" fill="#6f6f6f"/><path d="M2 8l14 9 14-9" stroke="#fff" stroke-width="1.5" fill="none"/></svg>
+          <div class="export-dest-btn__label">Email</div>
+        </button>
+      </div>
+
+      <div class="export-input-row">
+        <label class="export-input-label" for="exportAlertChannel">Slack channel</label>
+        <input class="export-input" id="exportAlertChannel" type="text" placeholder="#devops-alerts" value="#devops-alerts">
+        <div class="export-input-hint">Separate from your scheduled report channel</div>
+      </div>
+
+      <div class="export-section-label">Active configuration</div>
+      <div class="export-preview">
+        <div class="export-preview__row"><span class="export-preview__key">Triggers</span><span class="export-preview__val">Critical, High · Pod crash-loop · P1</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Via</span><span class="export-preview__val">Slack #devops-alerts · Outlook</span></div>
+        <div class="export-preview__row"><span class="export-preview__key">Status</span><span class="export-preview__val" style="color:#24a148">&#x25CF; Active</span></div>
+      </div>
+
+    </div><!-- /exportBody-alerts -->
+
+  </div><!-- /export-panel__body -->
+
+  <!-- Footer -->
+  <div class="export-panel__footer">
+    <button class="export-btn-primary" id="exportConfirmBtn" onclick="exportConfirm()">Send now</button>
+    <button class="export-btn-ghost" onclick="closeExportPanel()">Cancel</button>
+  </div>
+
+</aside><!-- /export-panel -->
+
+<!-- Export success toast -->
+<div class="export-toast" id="exportToast" role="alert" aria-live="assertive">
+  <svg class="export-toast__icon" width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+    <path d="M14 21.4l-5-5 1.4-1.4 3.6 3.6 7.6-7.6 1.4 1.4z"/>
+    <path d="M16 2a14 14 0 1014 14A14 14 0 0016 2zm0 26a12 12 0 1112-12 12 12 0 01-12 12z"/>
+  </svg>
+  <div>
+    <div class="export-toast__title" id="exportToastTitle">Report sent</div>
+    <div class="export-toast__body"  id="exportToastBody">Delivered to #devops-reports via Slack</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TRACE PANEL BACKDROP
+═══════════════════════════════════════════════════════════════════ -->
+<div class="trace-panel-backdrop" id="tracePanelBackdrop" onclick="closeTracePanel()" aria-hidden="true"></div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     TRACE PANEL — RJ (DevOps/Infra) — 600px tearsheet, 4 tabs
+     Triggered by: data-panel="openTrace" on any .ai-insight__ghost-btn
+═══════════════════════════════════════════════════════════════════ -->
+<aside class="trace-panel" id="tracePanel" aria-label="Incident detail" aria-hidden="true" role="complementary">
+
+  <!-- Header: critical red, P1 badge, close -->
+  <div class="trace-panel__header">
+    <div class="trace-panel__header-text">
+      <div class="trace-panel__header-title">Infrastructure · P1 Incident</div>
+      <div class="trace-panel__header-sub">payments-prod · payment-svc · 18 pods crash-looping · Active 8 min</div>
+    </div>
+    <span class="trace-panel__p1-badge">P1 Active</span>
+    <button class="trace-panel__close" aria-label="Close incident panel" onclick="closeTracePanel()">
+      <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M24 10L22.59 8.59 16 15.17 9.41 8.59 8 10l6.59 6.59L8 23.17 9.41 24.59 16 18l6.59 6.59L24 23.17l-6.59-6.58z"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="trace-panel__tabs" role="tablist" aria-label="Incident sections">
+    <button class="trace-panel__tab-btn trace-panel__tab-btn--active"
+            role="tab" aria-selected="true" aria-controls="tp-pane-summary"
+            id="tp-tab-summary" onclick="switchTraceTab('summary')">AI Summary</button>
+    <button class="trace-panel__tab-btn"
+            role="tab" aria-selected="false" aria-controls="tp-pane-infra"
+            id="tp-tab-infra" onclick="switchTraceTab('infra')">Infra Details</button>
+    <button class="trace-panel__tab-btn"
+            role="tab" aria-selected="false" aria-controls="tp-pane-actions"
+            id="tp-tab-actions" onclick="switchTraceTab('actions')">Actions</button>
+    <button class="trace-panel__tab-btn"
+            role="tab" aria-selected="false" aria-controls="tp-pane-team"
+            id="tp-tab-team" onclick="switchTraceTab('team')">Team</button>
+  </div>
+
+  <!-- Scrollable body -->
+  <div class="trace-panel__body">
+
+    <!-- ── Tab 1: AI Summary ───────────────────────────────────────── -->
+    <div class="trace-panel__tab-pane trace-panel__tab-pane--active"
+         id="tp-pane-summary" role="tabpanel" aria-labelledby="tp-tab-summary">
+
+      <!-- AI-generated summary block -->
+      <div class="tp-ai-block">
+        <div class="tp-ai-block__meta">
+          <span class="tp-ai-badge" aria-label="AI generated">AI</span>
+          <span class="tp-ai-block__label">AI-generated summary</span>
+          <span class="tp-ai-block__timestamp">10 Sept 2026 · 23:41</span>
+        </div>
+        <p class="tp-ai-block__text">
+          18 pods crash-looping in payments-prod after Deploy #482. DB connection pool at 99%
+          (198/200) — auto-scale +5 replicas is compensating but the pool ceiling has not been
+          raised. Scaling alone won't fix it. <strong>Roll back Deploy #482 now</strong> — rollback
+          window closes in ~3 min. Raise pool ceiling to 400 as immediate relief. Taint
+          worker-04 (CPU 96%) to block new replica placement. Notify Carlos (SRE, incident owner)
+          once rollback is initiated.
+        </p>
+      </div>
+
+      <!-- Key signal metrics -->
+      <p class="tp-section-heading">Key signals</p>
+      <div class="tp-key-metrics">
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">Crash-looping pods</div>
+          <div class="tp-metric-cell__value tp-metric-cell__value--critical">18</div>
+        </div>
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">DB pool usage</div>
+          <div class="tp-metric-cell__value tp-metric-cell__value--critical">99%</div>
+        </div>
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">Rollback window</div>
+          <div class="tp-metric-cell__value tp-metric-cell__value--warning">~3 min</div>
+        </div>
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">Auto-scale running</div>
+          <div class="tp-metric-cell__value tp-metric-cell__value--warning">+5 replicas</div>
+        </div>
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">worker-04 CPU</div>
+          <div class="tp-metric-cell__value tp-metric-cell__value--critical">96%</div>
+        </div>
+        <div class="tp-metric-cell">
+          <div class="tp-metric-cell__label">Correlated deploy</div>
+          <div class="tp-metric-cell__value tp-metric-cell__value--warning">#482</div>
+        </div>
+      </div>
+
+      <!-- Scope -->
+      <p class="tp-section-heading">Impact scope</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Namespace</span>
+        <span class="tp-metric-row__val">payments-prod</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Affected service</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">payment-svc</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Affected hosts</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">7</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Revenue at risk</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">~$48K (~$6K/min)</span>
+      </div>
+    </div><!-- /tp-pane-summary -->
+
+    <!-- ── Tab 2: Infra Details ────────────────────────────────────── -->
+    <div class="trace-panel__tab-pane"
+         id="tp-pane-infra" role="tabpanel" aria-labelledby="tp-tab-infra">
+
+      <p class="tp-section-heading">Pod health — payments-prod</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Crash-looping pods</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">18 / 23 total</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">CrashLoopBackOff reason</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">DB connection timeout</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Auto-scale trigger</span>
+        <span class="tp-metric-row__val">CPU &gt; 80% — +5 replicas added</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Restart count (last 5 min)</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">94 restarts</span>
+      </div>
+
+      <p class="tp-section-heading" style="margin-top:20px">Database</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">DB connection pool</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">198 / 200 (99%)</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Pool ceiling raised</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">No — action required</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Wait queue depth</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">312 requests</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Pool timeout</span>
+        <span class="tp-metric-row__val tp-metric-row__val--warning">30s (default)</span>
+      </div>
+
+      <p class="tp-section-heading" style="margin-top:20px">Host &amp; scheduler</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">worker-04 CPU</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">96% — do not schedule here</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Scheduler taint applied</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">No — action required</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Available nodes (healthy)</span>
+        <span class="tp-metric-row__val tp-metric-row__val--ok">6 (worker-01 to worker-06 excl. 04)</span>
+      </div>
+
+      <p class="tp-section-heading" style="margin-top:20px">Deploy #482</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Deploy pushed</span>
+        <span class="tp-metric-row__val">12 min ago</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Correlation</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">Incident started 90s after deploy</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Rollback target</span>
+        <span class="tp-metric-row__val">payment-svc v2.3.8 (pre-#482)</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Rollback window</span>
+        <span class="tp-metric-row__val tp-metric-row__val--warning">~3 min remaining</span>
+      </div>
+
+      <div class="tp-callout">
+        <strong>Root cause hypothesis:</strong> Deploy #482 introduced a connection leak or
+        removed pool-limit configuration in payment-svc. All pods are exhausting the shared
+        DB pool. Auto-scale adds replicas but each new pod immediately consumes more connections,
+        accelerating saturation. <strong>Rollback + raise pool ceiling simultaneously.</strong>
+      </div>
+    </div><!-- /tp-pane-infra -->
+
+    <!-- ── Tab 3: Actions ─────────────────────────────────────────── -->
+    <div class="trace-panel__tab-pane"
+         id="tp-pane-actions" role="tabpanel" aria-labelledby="tp-tab-actions">
+
+      <p class="tp-actions-intro">
+        AI-suggested probable actions ranked by expected impact.
+        Rollback and DB pool fix can be executed in parallel — do both now.
+      </p>
+
+      <div class="tp-action-list">
+
+        <!-- Action 1: Rollback Deploy #482 — top priority -->
+        <button class="tp-action-item tp-action-item--primary"
+                onclick="tpAction('Rollback of Deploy #482 initiated. Reverting to payment-svc v2.3.8...')">
+          <div class="tp-action-item__icon">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="#0f62fe" aria-hidden="true">
+              <path d="M12 10H6.78A11 11 0 1 1 5 16H3a13 13 0 1 0 3-8.22V4h-2v8h8z"/>
+            </svg>
+          </div>
+          <div class="tp-action-item__content">
+            <div class="tp-action-item__title">Rollback Deploy #482</div>
+            <div class="tp-action-item__desc">Revert payment-svc to v2.3.8 (stable). Deploy #482 correlates with incident start. <strong>Rollback window closes in ~3 min.</strong> Notify Carlos once initiated.</div>
+          </div>
+          <span class="tp-action-item__badge tp-action-item__badge--urgent">URGENT · &lt;3 min</span>
+        </button>
+
+        <!-- Action 2: Raise DB pool ceiling — immediate relief -->
+        <button class="tp-action-item tp-action-item--primary"
+                onclick="tpAction('DB pool ceiling raised to 400 in payments-prod. Monitoring pool utilisation...')">
+          <div class="tp-action-item__icon">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="#0f62fe" aria-hidden="true">
+              <path d="M16 4C9.4 4 4 9.4 4 16s5.4 12 12 12 12-5.4 12-12S22.6 4 16 4zm0 22C10.5 26 6 21.5 6 16S10.5 6 16 6s10 4.5 10 10-4.5 10-10 10z"/>
+              <path d="M17 11h-2v4H11v2h4v4h2v-4h4v-2h-4z"/>
+            </svg>
+          </div>
+          <div class="tp-action-item__content">
+            <div class="tp-action-item__title">Raise DB connection pool ceiling</div>
+            <div class="tp-action-item__desc">Increase max_connections from 200 → 400 in payments-prod. Takes effect immediately without pod restart. Run in parallel with rollback.</div>
+          </div>
+          <span class="tp-action-item__badge tp-action-item__badge--ai">AI · Immediate relief</span>
+        </button>
+
+        <!-- Action 3: Taint worker-04 -->
+        <button class="tp-action-item"
+                onclick="tpAction('Taint applied to worker-04. New replicas will not be scheduled there.')">
+          <div class="tp-action-item__icon">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="#525252" aria-hidden="true">
+              <path d="M16 2a14 14 0 1 0 14 14A14 14 0 0 0 16 2zm0 26a12 12 0 1 1 12-12 12 12 0 0 1-12 12z"/>
+              <path d="M11 15h10v2H11z"/>
+            </svg>
+          </div>
+          <div class="tp-action-item__content">
+            <div class="tp-action-item__title">Taint worker-04 to block scheduling</div>
+            <div class="tp-action-item__desc">Apply NoSchedule taint to worker-04 (CPU 96%). Prevents auto-scale replicas from landing on an overloaded node and worsening the incident.</div>
+          </div>
+        </button>
+
+        <!-- Action 4: Verify replica placement -->
+        <button class="tp-action-item"
+                onclick="tpAction('Opening pod placement view in Instana...')">
+          <div class="tp-action-item__icon">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="#525252" aria-hidden="true">
+              <path d="M26 24h-4v-4h-2v4h-4v2h4v4h2v-4h4v-2zM4 6h18v2H4zM4 12h14v2H4zM4 18h10v2H4z"/>
+            </svg>
+          </div>
+          <div class="tp-action-item__content">
+            <div class="tp-action-item__title">Verify replica placement on healthy nodes</div>
+            <div class="tp-action-item__desc">Confirm +5 auto-scale replicas have landed on worker-01–03 and worker-05–06. Evict any pods on worker-04 if taint was applied after scheduling.</div>
+          </div>
+        </button>
+
+        <!-- Action 5: Notify Carlos -->
+        <button class="tp-action-item"
+                onclick="tpAction('Carlos notified via Slack: rollback initiated, pool ceiling raised.')">
+          <div class="tp-action-item__icon">
+            <svg width="16" height="16" viewBox="0 0 32 32" fill="#525252" aria-hidden="true">
+              <path d="M27.45 15.11l-22-11a1 1 0 0 0-1.08.12A1 1 0 0 0 4 5v22a1 1 0 0 0 .62.92A1 1 0 0 0 5 28a1 1 0 0 0 .45-.11l22-11a1 1 0 0 0 0-1.78zm-20.9 9.49L8.76 17H18v-2H8.76L6.55 7.4 24.76 16z"/>
+            </svg>
+          </div>
+          <div class="tp-action-item__content">
+            <div class="tp-action-item__title">Notify Carlos (SRE, incident owner)</div>
+            <div class="tp-action-item__desc">Send handoff to Carlos: rollback initiated, DB pool ceiling raised, worker-04 tainted. He owns the SLO review and customer notification threshold.</div>
+          </div>
+          <span class="tp-action-item__badge tp-action-item__badge--ai">AI · Suggested</span>
+        </button>
+
+      </div>
+    </div><!-- /tp-pane-actions -->
+
+    <!-- ── Tab 4: Team ─────────────────────────────────────────────── -->
+    <div class="trace-panel__tab-pane"
+         id="tp-pane-team" role="tabpanel" aria-labelledby="tp-tab-team">
+
+      <p class="tp-team-intro">
+        You own infrastructure remediation (rollback, pool ceiling, node tainting).
+        <strong>Carlos S.</strong> (SRE) is triaging the trace and owns SLO impact and
+        customer notification. Coordinate the handoff once rollback is confirmed.
+      </p>
+
+      <!-- Carlos card -->
+      <div class="tp-person-card">
+        <div class="tp-person-card__top">
+          <div class="tp-person-card__avatar tp-person-card__avatar--carlos" aria-hidden="true">CS</div>
+          <div>
+            <div class="tp-person-card__name">Carlos S.</div>
+            <div class="tp-person-card__role">SRE · Incident Owner</div>
+          </div>
+        </div>
+        <div class="tp-person-card__context">
+          Carlos is triaging the trace from the application side — error rate 16.8%, P99 latency
+          8,400ms, SLO burn at 14.4×. He is waiting on infrastructure actions (rollback,
+          pool ceiling) before he can confirm whether the incident is resolving. He also owns
+          the customer notification threshold (~$48K exposure).
+        </div>
+        <div class="tp-person-card__actions">
+          <button class="tp-btn-green" onclick="pingCarlos()">Ping Carlos</button>
+          <button class="tp-btn-secondary" onclick="viewCarlosTrace()">View Carlos's trace</button>
+        </div>
+      </div>
+
+      <!-- Handoff context for Carlos -->
+      <p class="tp-section-heading">Handoff context for Carlos</p>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Rollback status</span>
+        <span class="tp-metric-row__val tp-metric-row__val--warning">Pending — window ~3 min</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Rollback target</span>
+        <span class="tp-metric-row__val">payment-svc v2.3.8 (pre-#482)</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">DB pool</span>
+        <span class="tp-metric-row__val tp-metric-row__val--critical">199/200 — raise to 400 in progress</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">worker-04</span>
+        <span class="tp-metric-row__val tp-metric-row__val--warning">CPU 96% — taint pending</span>
+      </div>
+      <div class="tp-metric-row">
+        <span class="tp-metric-row__key">Auto-scale replicas</span>
+        <span class="tp-metric-row__val">+5 running — verifying placement</span>
+      </div>
+    </div><!-- /tp-pane-team -->
+
+  </div><!-- /trace-panel__body -->
+
+  <!-- Sticky footer -->
+  <div class="trace-panel__footer">
+    <button class="tp-btn-primary" onclick="tpAction('Rollback of Deploy #482 initiated. Reverting to payment-svc v2.3.8...')">
+      Rollback Deploy #482
+      <svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true"><path d="M12 10H6.78A11 11 0 1 1 5 16H3a13 13 0 1 0 3-8.22V4h-2v8h8z"/></svg>
+    </button>
+    <button class="tp-btn-ghost" onclick="closeTracePanel()">Close</button>
+  </div>
+
+</aside><!-- /trace-panel -->
+
+
+</body>
+</html>
